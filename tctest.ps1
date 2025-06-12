@@ -18,3 +18,6 @@ Write-Host "Build Number: $env:BUILD_NUMBER"
 Write-Host "Build ID: $env:TEAMCITY_BUILD_ID"
 Write-Host "Agent Name: $env:TEAMCITY_AGENT_NAME"
 Write-Host "Checkout Directory: $env:TEAMCITY_BUILD_CHECKOUTDIR"
+Write-Host "Changelog file: $env:SYSTEM_TEAMCITY_BUILD_CHANGEDFILES_FILE"
+Write-Host "Changelog file (var): $(system.teamcity.build.changedFiles.file)"
+Get-Content -Path $env:SYSTEM_TEAMCITY_BUILD_CHANGEDFILES_FILE
