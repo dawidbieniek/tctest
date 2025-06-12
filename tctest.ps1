@@ -11,14 +11,9 @@ foreach ($line in $lines) {
   $revision = $parts[2]
   Write-Host "File: $filePath, Change: $changeType, Revision: $revision"
 }
-$token = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("$($env:system_teamcity_auth_userId):$($env:system_teamcity_auth_password)"))
-foreach ($line in Get-Content $changedFilesFile) {
-  $rev = ($line -split ':')[-1]
-  $req = [System.Net.HttpWebRequest]::Create("$env:teamcity_serverUrl/app/rest/changes/id:$rev")
-  $req.Headers.Add("Authorization", "Basic $token")
-  $xml = [xml]([System.IO.StreamReader]::new($req.GetResponse().GetResponseStream()).ReadToEnd())
-  $comment = $xml.change.comment
-  $user = $xml.change.commiter.vcsUsername
-  Write-Host "Commit $rev by ${user}: $comment"
+$uniqueRevs = $lines | ForEach-Object { ($_ -split ':')[-1] } | Sort-Object -Unique
+foreach ($rev in $uniqueRevs) {
+    $msg = git log -1 --pretty=format:"%H %an: %s" $rev
+    Write-Host $msg
 }
 Write-Host "=== TeamCity Environment Information ==="
