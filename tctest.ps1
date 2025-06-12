@@ -12,7 +12,7 @@ foreach ($line in $lines) {
   Write-Host "File: $filePath, Change: $changeType, Revision: $revision"
 }
 $token = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("$($env:system_teamcity_auth_userId):$($env:system_teamcity_auth_password)"))
-foreach ($line in Get-Content $env:system_teamcity_build_changedFiles_file) {
+foreach ($line in Get-Content $changedFilesFile) {
   $rev = ($line -split ':')[-1]
   $req = [System.Net.HttpWebRequest]::Create("$env:teamcity_serverUrl/app/rest/changes/id:$rev")
   $req.Headers.Add("Authorization", "Basic $token")
