@@ -19,6 +19,6 @@ foreach ($line in Get-Content $env:system_teamcity_build_changedFiles_file) {
   $xml = [xml]([System.IO.StreamReader]::new($req.GetResponse().GetResponseStream()).ReadToEnd())
   $comment = $xml.change.comment
   $user = $xml.change.commiter.vcsUsername
-  Write-Host "Commit $rev by $user: $comment"
+  Write-Host "Commit $rev by ${user}: $comment"
 }
 Write-Host "=== TeamCity Environment Information ==="
