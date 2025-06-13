@@ -75,7 +75,7 @@ foreach ($taskId in $cuIds) {
 		
 		if ($releaseValue -match ($projectAlreadyIsPresentWithoutBuildNrRegex -f $projectName)) {
 			write-host "Contains just project name $releaseValue"
-			$releaseValue = $releaseValue -replace $projectAlreadyIsPresentWithoutBuildNrRegex, "${projectName}: $buildNumber"
+			$releaseValue = $releaseValue -replace ($projectAlreadyIsPresentWithoutBuildNrRegex -f $projectName), "${projectName}: $buildNumber"
 		}
 		elseif ([string]::IsNullOrWhiteSpace($releaseValue)) {
 			write-host "Is empty $releaseValue"
@@ -83,7 +83,7 @@ foreach ($taskId in $cuIds) {
 		}
 		else {
 			write-host "Contains other things $releaseValue"
-			$releaseValue = "${projectName}: $buildNumber;" + $releaseValue
+			$releaseValue = "${projectName}: $buildNumber; " + $releaseValue
 		}
 		
 		Write-Host "($taskId) changing Release field to '$releaseValue'"
