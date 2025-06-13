@@ -8,7 +8,7 @@ Write-Host "Build number: $buildNumber"
 Write-Host "Changes file path: $changesFile"
 
 Write-Host "`n== Changes file contents: =="
-$lines = Get-Content $changedFilesFile
+$lines = Get-Content $changesFile
 foreach ($line in $lines) {
   Write-Host $line
   #$parts = $line -split ':'
