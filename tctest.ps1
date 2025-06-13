@@ -6,7 +6,7 @@ Param(
 # Its for testing only
 $cuApiKey = "pk_200656617_1O426MO22JSSR7YWVD4D9GL0XWX1PO78"
 $headers = @{
-    'Authorization' = $apiKey
+    'Authorization' = $cuApiKey
     'Accept'        = 'application/json'
 }
 
@@ -14,20 +14,14 @@ Write-Host "=== Parameter values ==="
 Write-Host "Build number: $buildNumber"
 Write-Host "Changes file path: $changesFile"
 Write-Host "CU Api key: $cuApiKey"
+Write-Host "Headers: $headers"
 
-Write-Host "`n== Changes file contents: =="
 $lines = Get-Content $changesFile
-foreach ($line in $lines) {
-  Write-Host $line
-  #$parts = $line -split ':'
-  #$filePath = $parts[0]
-  #$changeType = $parts[1]
-  #$revision = $parts[2]
-  #Write-Host "File: $filePath, Change: $changeType, Revision: $revision"
-}
+Write-Host "`n== Changes file contents: ==`n$($lines -join "`n")"
 
-Write-Host "`n== File Unique revs: =="
 $uniqueRevs = $lines | ForEach-Object { ($_ -split ':')[-1] } | Sort-Object -Unique
+Write-Host "`n== File Unique revs: ==`n$($uniqueRevs -join "`n")"
+
 $commitMessages = @()
 foreach ($rev in $uniqueRevs) {
     $msg = git log -1 --pretty=format:"%H %an: %s" $rev
@@ -37,26 +31,17 @@ foreach ($rev in $uniqueRevs) {
 
 $cuPattern = '(?i)CU-([A-Za-z0-9]+)'
 $cuIds = @()
-$trimmedIds = @()
-
 foreach ($msg in $commitMessages) {
     foreach ($match in [regex]::Matches($msg, $cuPattern)) {
-        $id = $match.Value
-        $cuIds += $id
-		$trimmedIds += $match.Groups[1].Value
+		$cuIds += $match.Groups[1].Value
     }
 }
 
-$trimmedIds = $trimmedIds | Select-Object -Unique
-
+$cuIds = $cuIds | Select-Object -Unique
 Write-Host "== CU Ids ==`n$($cuIds -join "`n")"
 
-$uniqueIds = $cuIds | Select-Object -Unique
-Write-Host "== Unique CU Ids ==`n$($uniqueIds -join "`n")"
-Write-Host "== Trimmed Ids ==`n$($trimmedIds -join "`n")"
-
 Write-Host "`n`n=== Sending requests to CU API ==="
-foreach ($taskId in $trimmedIds) {
+foreach ($taskId in $cuIds) {
     $url = "https://api.clickup.com/api/v2/task/$taskId"
 
     try {
