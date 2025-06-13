@@ -1,11 +1,12 @@
 Param(
   [string] [Parameter(Mandatory=$true)] $buildNumber,
   [string] [Parameter(Mandatory=$true)] $changesFile,
-  [string] [Parameter(Mandatory=$true)] $projectName
+  [string] [Parameter(Mandatory=$true)] $projectName,
+  [string] [Parameter(Mandatory=$true)] $cuApiKey
 )
 
 # Its for testing only
-$cuApiKey = "pk_200656617_1O426MO22JSSR7YWVD4D9GL0XWX1PO78"
+#$cuApiKey = "pk_200656617_1O426MO22JSSR7YWVD4D9GL0XWX1PO78"
 $headers = @{
     'Authorization' = $cuApiKey
     'Accept'        = 'application/json'
