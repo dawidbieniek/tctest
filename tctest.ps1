@@ -6,7 +6,7 @@ Param(
 )
 
 $apiKeyErrorCode = "OAUTH_019"
-$projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[A-Za-z0-9\.\-]+" # 0 - projectName
+$projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[0-9][A-Za-z0-9\.\-]*" # 0 - projectName
 $projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - projectName
 
 $cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
