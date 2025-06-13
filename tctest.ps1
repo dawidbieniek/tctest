@@ -73,3 +73,5 @@ foreach($t in $tasks){
     Write-Host "[$t] up-to-date"
   }
 }
+
+# Script arguments -BuildNumber "%system.build.number%" -ChangesFilePath "%system.teamcity.build.changedFiles.file%" -TcProjectName "%system.teamcity.projectName%" -CuApiKey "%CUApiKey%"
