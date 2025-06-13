@@ -74,7 +74,7 @@ foreach ($taskId in $cuIds) {
 		if ($releaseValue -match $projectAlreadyIsPresentWithoutBuildNrRegex) {
 			$releaseValue = $releaseValue -replace $projectAlreadyIsPresentWithoutBuildNrRegex, "${projectName}: $buildNumber"
 		}
-		else if ([string]::IsNullOrWhiteSpace($releaseValue)) {
+		elseif ([string]::IsNullOrWhiteSpace($releaseValue)) {
 			$releaseValue = "${projectName}: $buildNumber"
 		}
 		else {
