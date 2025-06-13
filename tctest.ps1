@@ -68,7 +68,7 @@ foreach ($taskId in $trimmedIds) {
         Write-Host "Fields: $($response.custom_fields)"
 		Write-Host "---------------"
     } catch {
-        Write-Warning "Failed to fetch task CU-$taskId: $_"
+        Write-Warning "Failed to fetch task CU-$taskId $_"
     }
 }
 
