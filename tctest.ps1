@@ -68,16 +68,20 @@ foreach ($taskId in $cuIds) {
 				
 		# Check if build is already set
 		if ($releaseValue -match $projectAlreadyHasBuidNrRegex) {
+			write-host "Contains build nr $releaseValue"
 			continue;
 		}
 		
 		if ($releaseValue -match $projectAlreadyIsPresentWithoutBuildNrRegex) {
+			write-host "Contains just project name $releaseValue"
 			$releaseValue = $releaseValue -replace $projectAlreadyIsPresentWithoutBuildNrRegex, "${projectName}: $buildNumber"
 		}
 		elseif ([string]::IsNullOrWhiteSpace($releaseValue)) {
+			write-host "Is empty $releaseValue"
 			$releaseValue = "${projectName}: $buildNumber"
 		}
 		else {
+			write-host "Contains other things $releaseValue"
 			$releaseValue = "${projectName}: $buildNumber;" + $releaseValue
 		}
 		
