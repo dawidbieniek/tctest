@@ -59,7 +59,7 @@ $cuIds | ForEach-Object { Write-Host "- $_" }
 
 # update tasks field
 foreach ($taskId in $cuIds) {
-    $url = $getTaskUrl -f taskId
+    $url = $getTaskUrl -f $taskId
 
     try {
         $response = Invoke-RestMethod -Method Get -Uri $url -Headers $getTaskHeaders
@@ -69,20 +69,16 @@ foreach ($taskId in $cuIds) {
 		write-host $taskId
 		# Check if build is already set
 		if ($releaseValue -match ($projectAlreadyHasBuidNrRegex -f $projectName)) {
-			write-host "Contains build nr $releaseValue"
 			continue;
 		}
 		
 		if ($releaseValue -match ($projectAlreadyIsPresentWithoutBuildNrRegex -f $projectName)) {
-			write-host "Contains just project name $releaseValue"
 			$releaseValue = $releaseValue -replace ($projectAlreadyIsPresentWithoutBuildNrRegex -f $projectName), "${projectName}: $BuildNumber"
 		}
 		elseif ([string]::IsNullOrWhiteSpace($releaseValue)) {
-			write-host "Is empty $releaseValue"
 			$releaseValue = "${projectName}: $BuildNumber"
 		}
 		else {
-			write-host "Contains other things $releaseValue"
 			$releaseValue = "${projectName}: $BuildNumber; " + $releaseValue
 		}
 		
@@ -91,7 +87,6 @@ foreach ($taskId in $cuIds) {
 		if (-not (ClickUpFieldValue -TaskId $taskId -FieldId $fieldId -Value $releaseValue)) {
 			Write-Warning "[$taskId] Failed to set Release field."
 		}
-		
 	}
 	catch [System.Net.WebException] {        
 		$errorResponse = $_.Exception.Response.GetResponseStream()
