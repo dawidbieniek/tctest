@@ -1,101 +1,129 @@
 Param(
   [string] [Parameter(Mandatory=$true)] $buildNumber,
-  [string] [Parameter(Mandatory=$true)] $changesFile,
-  [string] [Parameter(Mandatory=$true)] $projectName,
+  [string] [Parameter(Mandatory=$true)] $changesFilePath,
+  [string] [Parameter(Mandatory=$true)] $tcProjectName,
   [string] [Parameter(Mandatory=$true)] $cuApiKey
 )
 
-# Its for testing only
-#$cuApiKey = "pk_200656617_1O426MO22JSSR7YWVD4D9GL0XWX1PO78"
-$headers = @{
+$apiKeyErrorCode = "OAUTH_019"
+$projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[A-Za-z0-9\.\-]+" # 0 - projectName
+$projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - projectName
+
+$cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
+$getTaskUrl = "https://api.clickup.com/api/v2/task/{0}" # 0 - taskId
+$getTaskHeaders = @{
+    'Authorization' = $cuApiKey
+    'Accept'        = 'application/json'
+}
+$postFieldValueUrl = "https://api.clickup.com/api/v2/task/{0}/field/{1}" # 0 - taskId, 1 - fieldId
+$postFieldValueHeaders= @{
     'Authorization' = $cuApiKey
     'Accept'        = 'application/json'
     'Content-Type'  = 'application/json'
 }
-$projectMap = @{
-    "InnyProjekt"   = "Nowy projekt"
-    "Tctest"  = "Starszy projekt"
-    "Takiej nazwy nie będzie"  = "SomethingElse"
+
+# translate project name
+$projectNameMap = @{
+    "Emplo" = "TMS"
+    "Admin2" = "Admin"
+    "??wallapi" = "Wall"
+	"InnyProjekt" = "Nowy"
+	"Tctest" = "Stary"
 }
 
-Write-Host "=== Parameter values ==="
-Write-Host "Build number: $buildNumber"
-Write-Host "Changes file path: $changesFile"
-Write-Host "Project name: $projectName"
-Write-Host "CU Api key: $cuApiKey"
-Write-Host "Headers: $headers"
-
-$mappedName = $projectMap[$projectName]
-if (-not $mappedName) {
-	$mappedName = "Empty"
-    Write-Warning "No mapping found for project '$projectName'"
-}
-else {
-	Write-Host "Project name $mappedName"
+$projectName = $projectNameMap[$tcProjectName]
+if (-not $projectName) {
+    Write-Warning "Couldn't find ${tcProjectName} in project name map"
+	$projectName = $tcProjectName
 }
 
-
-$lines = Get-Content $changesFile
-Write-Host "`n== Changes file contents: ==`n$($lines -join "`n")"
-
-$uniqueRevs = $lines | ForEach-Object { ($_ -split ':')[-1] } | Sort-Object -Unique
-Write-Host "`n== File Unique revs: ==`n$($uniqueRevs -join "`n")"
-
-$commitMessages = @()
-foreach ($rev in $uniqueRevs) {
-    $msg = git log -1 --pretty=format:"%H %an: %s" $rev
-    Write-Host $msg
-	$commitMessages += $msg
-}
-
-$cuPattern = '(?i)CU-([A-Za-z0-9]+)'
+# get task ids
+## Get changes file contents
+$changedFiles = Get-Content $changesFilePath
+## Extract uniq revs
+$uniqueRevs = $changedFiles | ForEach-Object { ($_ -split ':')[-1] } | Select-Object -Unique
+## Get commit messages from revs
+$commitMessages = $uniqueRevs | ForEach-Object { git log -1 --format="%s" $_ }
+## Extract unique CU ids from messages
 $cuIds = @()
 foreach ($msg in $commitMessages) {
-    foreach ($match in [regex]::Matches($msg, $cuPattern)) {
-		$cuIds += $match.Groups[1].Value
+    $matches = [regex]::Matches($msg, $cuIdRegex)
+    foreach ($match in $matches) {
+        $cuIds += $match.Groups[1].Value
     }
 }
-
 $cuIds = $cuIds | Select-Object -Unique
-Write-Host "== CU Ids ==`n$($cuIds -join "`n")"
 
-Write-Host "`n`n=== Sending requests to CU API ==="
+Write-Host "Found CU task ids:"
+$cuIds | ForEach-Object { Write-Host "- $_" }
+
+# update tasks field
 foreach ($taskId in $cuIds) {
     $url = "https://api.clickup.com/api/v2/task/$taskId"
 
     try {
-        $response = Invoke-RestMethod -Method Get -Uri $url -Headers $headers
-        Write-Host "Task $taskId retrieved successfully."
-		Write-Host "Id: $($response.id)"
-		Write-Host "Task: $($response.name)"
-        Write-Host "Status: $($response.status.status)"
-        Write-Host "Fields: $($response.custom_fields)"
-		
+        $response = Invoke-RestMethod -Method Get -Uri $url -Headers $getTaskHeaders
 		$releaseField = $response.custom_fields | Where-Object { $_.name -eq "Release" }
 		$releaseValue = if ($releaseField -and $releaseField.value) { $releaseField.value } else { [string]::Empty }
-		$fieldId = if ($releaseField -and $releaseField.id) { $releaseField.id } else { [string]::Empty }
-        Write-Host "THE FIELD: $releaseField"
-		Write-Host "---------------"
-		
-		$value = $mappedName + " " + $buildNumber
-		Write-Host "Setting field value to: $value"
-		$body = @{
-			value = "$value"
-		} | ConvertTo-Json -Depth 2
-		
-		try {
-			$url = "https://api.clickup.com/api/v2/task/$taskId/field/$fieldId"
-			Write-Host "Sending POST request"
-			$response = Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body $body
-			Write-Host "Field updated successfully."
-		} catch {
-			Write-Warning "Failed to update field: $_"
+				
+		# Check if build is already set
+		if ($releaseValue -match $projectAlreadyHasBuidNrRegex) {
+			continue;
 		}
 		
+		if ($releaseValue -match $projectAlreadyIsPresentWithoutBuildNrRegex) {
+			$releaseValue = $releaseValue -replace $projectAlreadyIsPresentWithoutBuildNrRegex, "$projectName: $buildNumber"
+		}
 		
-    } catch {
-        Write-Warning "Failed to fetch task CU-$taskId $_"
-    }
+		# Build the new body
+		if ([string]::IsNullOrWhiteSpace($releaseValue)) {
+			$releaseValue = "$projectName: $buildNumber"
+		}
+		else {
+			$releaseValue = "$projectName: $buildNumber;" + $releaseValue
+		}
+		
+		Write-Host "($taskId) changing Release field to '$releaseValue'"
+		
+		
+	}
+	catch [System.Net.WebException] {        
+		$errorResponse = $_.Exception.Response.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($errorResponse)
+        $reader.BaseStream.Position = 0
+        $reader.DiscardBufferedData()
+        $errorResponseJson = $reader.ReadToEnd() | ConvertFrom-Json
+		$errorCode = $errorResponseJson.ECODE
+		if ($errorCode -eq $apiKeyErrorCode) {
+			Write-Warning "Invalid ClickUp api key`n$_"
+		}
+		else {
+			Write-Warning "Failed to fetch task: $taskId`n$_"
+		}
+	}
+	catch {
+		Write-Warning "Failed to fetch task: $taskId`n$_"
+	}
 }
-
-Write-Host "`n=== END ==="
+		
+		
+		
+		# Write-Host "Setting field value to: $value"
+		# $body = @{
+			# value = "$value"
+		# } | ConvertTo-Json -Depth 2
+		
+		# try {
+			# $url = "https://api.clickup.com/api/v2/task/$taskId/field/$fieldId"
+			# Write-Host "Sending POST request"
+			# $response = Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body $body
+			# Write-Host "Field updated successfully."
+		# } catch {
+			# Write-Warning "Failed to update field: $_"
+		# }
+		
+		
+    # } catch {
+        # Write-Warning "Failed to fetch task CU-$taskId $_"
+    # }
+# }
