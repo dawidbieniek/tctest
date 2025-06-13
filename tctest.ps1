@@ -5,6 +5,10 @@ Param(
 
 # Its for testing only
 $cuApiKey = "pk_200656617_1O426MO22JSSR7YWVD4D9GL0XWX1PO78"
+$headers = @{
+    'Authorization' = $apiKey
+    'Accept'        = 'application/json'
+}
 
 Write-Host "=== Parameter values ==="
 Write-Host "Build number: $buildNumber"
@@ -31,19 +35,41 @@ foreach ($rev in $uniqueRevs) {
 	$commitMessages += $msg
 }
 
-$cuPattern = '(?i)\[CU-[A-Za-z0-9]+\]'
+$cuPattern = '(?i)CU-([A-Za-z0-9]+)'
 $cuIds = @()
+$trimmedIds = @()
 
 foreach ($msg in $commitMessages) {
     foreach ($match in [regex]::Matches($msg, $cuPattern)) {
-        $id = $match.Value.Trim('[', ']')
+        $id = $match.Value
         $cuIds += $id
+		$trimmedIds += $match.Groups[1].Value
     }
 }
+
+$trimmedIds = $trimmedIds | Select-Object -Unique
 
 Write-Host "== CU Ids ==`n$($cuIds -join "`n")"
 
 $uniqueIds = $cuIds | Select-Object -Unique
 Write-Host "== Unique CU Ids ==`n$($uniqueIds -join "`n")"
+Write-Host "== Trimmed Ids ==`n$($trimmedIds -join "`n")"
+
+Write-Host "`n`n=== Sending requests to CU API ==="
+foreach ($taskId in $trimmedIds) {
+    $url = "https://api.clickup.com/api/v2/task/$taskId"
+
+    try {
+        $response = Invoke-RestMethod -Method Get -Uri $url -Headers $headers
+        Write-Host "Task $taskId retrieved successfully."
+		Write-Host "Id: $($response.id)"
+		Write-Host "Task: $($response.name)"
+        Write-Host "Status: $($response.status.status)"
+        Write-Host "Fields: $($response.custom_fields)"
+		Write-Host "---------------"
+    } catch {
+        Write-Warning "Failed to fetch task CU-$taskId: $_"
+    }
+}
 
 Write-Host "`n=== END ==="
