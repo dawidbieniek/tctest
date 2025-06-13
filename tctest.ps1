@@ -65,14 +65,15 @@ foreach ($taskId in $cuIds) {
         $response = Invoke-RestMethod -Method Get -Uri $url -Headers $getTaskHeaders
 		$releaseField = $response.custom_fields | Where-Object { $_.name -eq "Release" }
 		$releaseValue = if ($releaseField -and $releaseField.value) { $releaseField.value } else { [string]::Empty }
-				
+
+		write-host $taskId
 		# Check if build is already set
-		if ($releaseValue -match $projectAlreadyHasBuidNrRegex) {
+		if ($releaseValue -match ($projectAlreadyHasBuidNrRegex -f $projectName)) {
 			write-host "Contains build nr $releaseValue"
 			continue;
 		}
 		
-		if ($releaseValue -match $projectAlreadyIsPresentWithoutBuildNrRegex) {
+		if ($releaseValue -match ($projectAlreadyIsPresentWithoutBuildNrRegex -f $projectName)) {
 			write-host "Contains just project name $releaseValue"
 			$releaseValue = $releaseValue -replace $projectAlreadyIsPresentWithoutBuildNrRegex, "${projectName}: $buildNumber"
 		}
