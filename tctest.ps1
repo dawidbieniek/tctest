@@ -37,7 +37,7 @@ $cuIds = @()
 foreach ($msg in $commitMessages) {
     foreach ($match in [regex]::Matches($msg, $cuPattern)) {
         $id = $match.Value.Trim('[', ']')
-        $found += $id
+        $cuIds += $id
     }
 }
 
