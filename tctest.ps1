@@ -72,15 +72,15 @@ foreach ($taskId in $cuIds) {
 		}
 		
 		if ($releaseValue -match $projectAlreadyIsPresentWithoutBuildNrRegex) {
-			$releaseValue = $releaseValue -replace $projectAlreadyIsPresentWithoutBuildNrRegex, "$projectName: $buildNumber"
+			$releaseValue = $releaseValue -replace $projectAlreadyIsPresentWithoutBuildNrRegex, "${projectName}: $buildNumber"
 		}
 		
 		# Build the new body
 		if ([string]::IsNullOrWhiteSpace($releaseValue)) {
-			$releaseValue = "$projectName: $buildNumber"
+			$releaseValue = "${projectName}: $buildNumber"
 		}
 		else {
-			$releaseValue = "$projectName: $buildNumber;" + $releaseValue
+			$releaseValue = "${projectName}: $buildNumber;" + $releaseValue
 		}
 		
 		Write-Host "($taskId) changing Release field to '$releaseValue'"
