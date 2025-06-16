@@ -163,7 +163,7 @@ function Clear-TasksListFile {
 
 # Main Logic
 $projectName = Get-TranslatedProjectName -Name $TcProjectName
-$cuIds = Get-TaskIdsFromFille
+$cuIds = Get-TaskIdsFromFile
 
 if ($cuIds.Length -gt 0) {
     Write-Host "Found $($cuIds.Length) CU tasks:"

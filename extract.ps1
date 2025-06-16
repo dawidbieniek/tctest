@@ -1,7 +1,6 @@
 param(
     [CmdletBinding()]
-    [Parameter(Mandatory = $true)]
-    [string] $ChangesFilePath
+    [Parameter(Mandatory = $true)][string] $ChangesFilePath
 )
 
 # Constants
@@ -29,7 +28,6 @@ $newTasks = Get-TaskIdsFromChanges
 if ($newTasks.Length -gt 0) {
     Write-Host "Found $($newTasks.Length) new CU tasks:"
     $newTasks | ForEach-Object { Write-Host "- $_" }
-    Write-Host
 } else {
     Write-Host "Couldn't find any new CU tasks"
     exit(0)
@@ -40,6 +38,7 @@ if (Test-Path $tasksListFile) {
     $existingTasks = Get-Content $tasksListFile | Where-Object { $_.Trim() } 
     if ($existingTasks.Count -gt 0) {
         Write-Warning "Existing task list contains $($existingTasks.Count) tasks. This state is valid only when previous build failed or was stopped"
+        Write-Host "Tasks in file:"
         $existingTasks | ForEach-Object { Write-Host "- $_" }
     }
 } else {
@@ -50,5 +49,5 @@ if (Test-Path $tasksListFile) {
 $allTasks = $existingTasks + $newTasks | Select-Object -Unique
 
 $allTasks | Out-File -FilePath $tasksListFile -Encoding UTF8
-Write-Host "Written $($allTasks.Count) unique tasks to ${tasksListFile}:"
+Write-Host "Written $($allTasks.Count) tasks to '${tasksListFile}':"
 $allTasks | ForEach-Object { Write-Host "- $_" }
