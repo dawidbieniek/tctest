@@ -1,12 +1,13 @@
 param(
     [CmdletBinding()]
-    [Parameter(Mandatory = $true)][string] $BuildNumber,
-    [Parameter(Mandatory = $true)][string] $TcProjectName,
-    [Parameter(Mandatory = $true)][string] $CuApiKey
+    [Parameter(Mandatory)][string] $BuildNumber,
+    [Parameter(Mandatory)][string] $TcProjectName,
+    [Parameter(Mandatory)][string] $CuApiKey,
+    [Parameter(Mandatory)][string] $BranchName
 )
 
 # For tests
-if ((Get-Random -Minimum 0 -Maximum 3) -gt 0) {
+if ((Get-Random -Minimum 0 -Maximum 3) -gt 2) {
     throw "Random failure occurred."
 }
 

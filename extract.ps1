@@ -1,11 +1,52 @@
 param(
     [CmdletBinding()]
-    [Parameter(Mandatory = $true)][string] $ChangesFilePath
+    [Parameter(Mandatory)][string] $ChangesFilePath,
+    [Parameter(Mandatory)][string] $TeamcityUrl,
+    [Parameter(Mandatory)][string] $BuildTypeId,
+    [Parameter(Mandatory)][string] $BranchName
 )
 
 # Constants
 $cuIdRegex      = '(?i)CU-([A-Za-z0-9]+)'
 $tasksListFile  = 'tasks.txt'
+
+$tcApiToken = "eyJ0eXAiOiAiVENWMiJ9.Q2o5SkR2WHJUOXQ3LUhRNm5Nd2hsNnkwWFlR.NTJkYTM5OTYtNDAxMy00MGQ1LTlkODYtZWY2MzRjMDVhMmQ5"
+
+$headers = @{
+  "Authorization" = "Bearer $tcApiToken"
+}
+
+function Get-TaskIdsFromLastBuild {
+    $downloadUrl = "$TeamcityUrl/repository/download/$BuildTypeId/.lastFinished/${tasksListFile}?branch=$BranchName"
+    
+    try {
+        $artifactResponse = Invoke-RestMethod -Uri $downloadUrl -Headers $headers;
+    } 
+    catch {
+        if ($_.Exception.Response.StatusCode.Value__ -eq 404) {
+            return @()
+        }
+        else {
+            throw $_.Exception
+        }
+    }
+
+    if ($artifactResponse -is [string]) {
+        $existingTasks = $artifactResponse -split "\r?\n" | Where-Object { $_.Trim() -ne "" }
+    } elseif ($resp -is [string[]]) {
+        $existingTasks = $artifactResponse | Where-Object { $_.Trim() -ne "" }
+    } else {
+        $existingTasks = ($artifactResponse.ToString()) -split "\r?\n" | Where-Object { $_.Trim() -ne "" }
+    }
+
+    if ($existingTasks.Count -gt 0) {
+        Write-Warning "Existing task list contains $($existingTasks.Count) tasks. This state is valid only when previous build failed or was stopped"
+        Write-Host "Tasks in file:"
+        $existingTasks | ForEach-Object { Write-Host "- $_" }
+    }
+
+    return $existingTasks
+}
 
 function Get-TaskIdsFromChanges {
     $changedFiles = Get-Content $ChangesFilePath
@@ -24,16 +65,7 @@ function Get-TaskIdsFromChanges {
 }
 
 # Check for old tasks
-if (Test-Path $tasksListFile) {
-    $existingTasks = Get-Content $tasksListFile | Where-Object { $_.Trim() } 
-    if ($existingTasks.Count -gt 0) {
-        Write-Warning "Existing task list contains $($existingTasks.Count) tasks. This state is valid only when previous build failed or was stopped"
-        Write-Host "Tasks in file:"
-        $existingTasks | ForEach-Object { Write-Host "- $_" }
-    }
-} else {
-    $existingTasks = @()
-}
+$existingTasks = Get-TaskIdsFromLastBuild
 
 # Check for new tasks
 $newTasks = Get-TaskIdsFromChanges
