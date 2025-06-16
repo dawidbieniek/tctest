@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory = $true)][string] $BuildNumber,
     [Parameter(Mandatory = $true)][string] $ChangesFilePath,
     [Parameter(Mandatory = $true)][string] $TcProjectName,
-    [Parameter(Mandatory = $true)][string] $CuApiKey
+    [Parameter(Mandatory = $true)][string] $CuApiKey,
+    [Parameter(Mandatory = $true)][string] $FilePath
 )
 
 # For tests
@@ -11,7 +12,7 @@ param(
 #     throw "Random failure occurred."
 # }
 
-$file = "$Env:TEAMCITY_BUILD_CHECKOUTDIR\tasks.txt"
+$file = "$FilePath/tasks.txt"
 if (-Not (Test-Path $file)) {
   Write-Host "!!! No tasks.txt found — did the dependency pull it?"
 } else {
@@ -50,7 +51,7 @@ function Get-TranslatedProjectName {
     param([string]$Name)
 
     if ($projectNameMap.ContainsKey($Name)) {
-        Write-Host "Using '$($projectNameMap[$Name])'as project name"
+        Write-Host "Using '$($projectNameMap[$Name])' as project name"
         return $projectNameMap[$Name]
     }
 

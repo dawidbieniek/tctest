@@ -1,6 +1,7 @@
 param(
     [CmdletBinding()]
-    [Parameter(Mandatory = $true)][string] $ChangesFilePath
+    [Parameter(Mandatory = $true)][string] $ChangesFilePath,
+    [Parameter(Mandatory = $true)][string] $FilePath
 )
 
 
@@ -21,7 +22,10 @@ function Get-TaskIdsFromChanges {
 }
 
 $tasks = Get-TaskIdsFromChanges
-$outFile = "$Env:TEAMCITY_BUILD_CHECKOUTDIR\tasks.txt"
+$outFile = "$FilePath/tasks.txt"
+
+Write-Host $outFile
+
 $tasks | Out-File -FilePath $outFile -Encoding UTF8
 
 Write-Host "Saved $($tasks.Count) tasks to tasks.txt"
