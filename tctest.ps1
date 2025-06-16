@@ -37,6 +37,41 @@ if (-not $projectName) {
 	$projectName = $TcProjectName
 }
 
+
+function Set-ClickUpFieldValue {
+    param(
+        [Parameter(Mandatory)][string] $TaskId,
+        [Parameter(Mandatory)][string] $FieldId,
+        [Parameter(Mandatory)][string] $Value
+    )
+
+    $body = @{ value = $Value } | ConvertTo-Json -Depth 2
+    $url = $postFieldValueUrl -f $TaskId, $FieldId
+	
+    try {
+        Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body $body
+        Write-Host "[$TaskId] ► Updated field $FieldId → $Value"
+        return $true
+    }
+    catch [System.Net.WebException] {
+        $stream = $_.Exception.Response.GetResponseStream()
+        $responseBody = [System.IO.StreamReader]::new($stream).ReadToEnd()
+        if ($responseBody) {
+            $err = ($responseBody | ConvertFrom-Json)
+            Write-Warning "[$TaskId] API error: $($err.err) (ECODE: $($err.ECODE))"
+        }
+        else {
+            Write-Warning "[$TaskId] HTTP error: $($_.Exception.Message)"
+        }
+        return $false
+    }
+    catch {
+        Write-Warning "[$TaskId] Unexpected error: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+
 # get task ids
 ## Get changes file contents
 $changedFiles = Get-Content $ChangesFilePath
@@ -105,37 +140,4 @@ foreach ($taskId in $cuIds) {
 	catch {
 		Write-Warning "Failed to fetch task: $taskId`n$_"
 	}
-}
-
-function Set-ClickUpFieldValue {
-    param(
-        [Parameter(Mandatory)][string] $TaskId,
-        [Parameter(Mandatory)][string] $FieldId,
-        [Parameter(Mandatory)][string] $Value
-    )
-
-    $body = @{ value = $Value } | ConvertTo-Json -Depth 2
-    $url = $postFieldValueUrl -f $TaskId, $FieldId
-	
-    try {
-        Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body $body
-        Write-Host "[$TaskId] ► Updated field $FieldId → $Value"
-        return $true
-    }
-    catch [System.Net.WebException] {
-        $stream = $_.Exception.Response.GetResponseStream()
-        $responseBody = [System.IO.StreamReader]::new($stream).ReadToEnd()
-        if ($responseBody) {
-            $err = ($responseBody | ConvertFrom-Json)
-            Write-Warning "[$TaskId] API error: $($err.err) (ECODE: $($err.ECODE))"
-        }
-        else {
-            Write-Warning "[$TaskId] HTTP error: $($_.Exception.Message)"
-        }
-        return $false
-    }
-    catch {
-        Write-Warning "[$TaskId] Unexpected error: $($_.Exception.Message)"
-        return $false
-    }
 }
