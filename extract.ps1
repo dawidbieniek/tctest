@@ -7,6 +7,9 @@ param(
 
 function Get-TaskIdsFromChanges {
     $changedFiles = Get-Content $ChangesFilePath
+
+    Write-Host $changedFiles
+
     $uniqueRevs = $changedFiles | ForEach-Object { ($_ -split ':')[-1] } | Select-Object -Unique
     $commitMessages = $uniqueRevs | ForEach-Object { git log -1 --format="%s" $_ }
 

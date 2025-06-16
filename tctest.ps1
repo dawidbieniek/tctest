@@ -20,7 +20,7 @@ if (-Not (Test-Path $file)) {
     $tasks = Get-Content $file | Where-Object { $_.Trim() }
     Write-Host "Read $($tasks.Count) tasks from tasks.txt"
 }
-
+exit(0)
 # Constants
 $projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - displayName
 $projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[0-9][A-Za-z0-9\.\-]*" # 0 - projectName
