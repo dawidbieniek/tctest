@@ -73,7 +73,6 @@ function Write-WebError {
     if ($responseBody) {
         $err = ($responseBody | ConvertFrom-Json)
         Write-Warning "[$TaskId] API error: $($err.err) (ECODE: $($err.ECODE))"
-        Write-Host "ECODE 'OAUTH_019' usualy means wrong API key"
     }
     else {
         Write-Warning "[$TaskId] HTTP error: $($_.Exception.Message)"
