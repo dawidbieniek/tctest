@@ -49,7 +49,7 @@ function Set-ClickUpFieldValue {
     $url = $postFieldValueUrl -f $TaskId, $FieldId
 	
     try {
-        Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body $body
+        Invoke-RestMethod -Method Post -Uri $url -Headers $postFieldValueHeaders -Body $body
         Write-Host "[$TaskId] ► Updated field $FieldId → $Value"
         return $true
     }
