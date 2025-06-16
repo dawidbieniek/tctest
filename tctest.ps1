@@ -154,8 +154,8 @@ function Update-ClickUpTasks {
 
 function Clear-TasksListFile {
     if (Test-Path $tasksListFile) {
-        Clear-Content $tasksListFile
-        Write-Host "Cleared '$tasksListFile'"
+        Remove-Item $tasksListFile -ErrorAction SilentlyContinue
+        Write-Host "Removed '$tasksListFile'"
     } else {
         Write-Host "No '$tasksListFile' to clear"
     }
