@@ -60,6 +60,26 @@ function Get-TaskIdsFromFile {
     return $existingTasks
 }
 
+function Write-WebError {
+    param(
+        [Parameter(Mandatory)][System.Net.WebException] $Exception
+    )
+
+    $stream = $Exception.Response.GetResponseStream()
+    $reader = New-Object System.IO.StreamReader($stream)
+    $reader.BaseStream.Position = 0
+    $reader.DiscardBufferedData()
+    $responseBody = $reader.ReadToEnd()
+    if ($responseBody) {
+        $err = ($responseBody | ConvertFrom-Json)
+        Write-Warning "[$TaskId] API error: $($err.err) (ECODE: $($err.ECODE))"
+        Write-Host "ECODE 'OAUTH_019' usualy means wrong API key"
+    }
+    else {
+        Write-Warning "[$TaskId] HTTP error: $($_.Exception.Message)"
+    }
+}
+
 function Set-ClickUpFieldValue {
     param(
         [Parameter(Mandatory)][string] $TaskId,
@@ -76,16 +96,7 @@ function Set-ClickUpFieldValue {
         return $true
     }
     catch [System.Net.WebException] {
-        $stream = $_.Exception.Response.GetResponseStream()
-        $responseBody = [System.IO.StreamReader]::new($stream).ReadToEnd()
-        if ($responseBody) {
-            $err = ($responseBody | ConvertFrom-Json)
-            Write-Warning "[$TaskId] API error: $($err.err) (ECODE: $($err.ECODE))"
-            Write-Host "ECODE 'OAUTH_019' usualy means wrong API key"
-        }
-        else {
-            Write-Warning "[$TaskId] HTTP error: $($_.Exception.Message)"
-        }
+        Write-WebError -Exception $_.Exception
         return $false
     }
     catch {
@@ -133,16 +144,7 @@ function Update-ClickUpTasks {
             }
         }
         catch [System.Net.WebException] {
-            $stream = $_.Exception.Response.GetResponseStream()
-            $responseBody = [System.IO.StreamReader]::new($stream).ReadToEnd()
-            if ($responseBody) {
-                $err = ($responseBody | ConvertFrom-Json)
-                Write-Warning "[$TaskId] API error: $($err.err) (ECODE: $($err.ECODE))"
-                Write-Host "ECODE 'OAUTH_019' usualy means wrong API key"
-            } 
-            else {
-                Write-Warning "[$TaskId] HTTP error: $($_.Exception.Message)"
-            }
+            Write-WebError -Exception $_.Exception
             return $false
         }
         catch {
