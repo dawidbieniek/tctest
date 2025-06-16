@@ -1,0 +1,5 @@
+src/services/UserService.js:MODIFIED:e29ed00b454e8a3672112a10aee27e3f807691c4
+src/models/User.ts:ADDED:e29ed00b454e8a3672112a10aee27e3f807691c4
+config/legacy-config.yml:DELETED:a9623649aa4a74f7af8384987b0863d6f9cec4c1
+README.md:MODIFIED:a9623649aa4a74f7af8384987b0863d6f9cec4c1
+docs/architecture.md:ADDED:826fe79e4e2b4c8986422db6e45d9c472a6410c4
