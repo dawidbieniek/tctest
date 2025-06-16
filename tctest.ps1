@@ -1,30 +1,20 @@
 param(
     [CmdletBinding()]
     [Parameter(Mandatory = $true)][string] $BuildNumber,
-    [Parameter(Mandatory = $true)][string] $ChangesFilePath,
     [Parameter(Mandatory = $true)][string] $TcProjectName,
-    [Parameter(Mandatory = $true)][string] $CuApiKey,
-    [Parameter(Mandatory = $true)][string] $FilePath
+    [Parameter(Mandatory = $true)][string] $CuApiKey
 )
 
 # For tests
-# if ((Get-Random -Minimum 0 -Maximum 2) -eq 0) {
-#     throw "Random failure occurred."
-# }
-
-$file = "tasks.txt"
-if (-Not (Test-Path $file)) {
-  Write-Host "!!! No tasks.txt found — did the dependency pull it?"
-} else {
-    Write-Host "Read: $(Get-Content $file)"
-    $tasks = Get-Content $file | Where-Object { $_.Trim() }
-    Write-Host "Read $($tasks.Count) tasks from tasks.txt"
+if ((Get-Random -Minimum 0 -Maximum 2) -eq 0) {
+    throw "Random failure occurred."
 }
-exit(0)
+
 # Constants
+$tasksListFile  = 'tasks.txt'
+
 $projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - displayName
 $projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[0-9][A-Za-z0-9\.\-]*" # 0 - projectName
-$cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
 
 $getTaskUrl = "https://api.clickup.com/api/v2/task/{0}" # 0 - taskId
 $getTaskHeaders = @{
@@ -60,20 +50,33 @@ function Get-TranslatedProjectName {
     return $Name
 }
 
-function Get-TaskIdsFromChanges {
-    $changedFiles = Get-Content $ChangesFilePath
-    $uniqueRevs = $changedFiles | ForEach-Object { ($_ -split ':')[-1] } | Select-Object -Unique
-    $commitMessages = $uniqueRevs | ForEach-Object { git log -1 --format="%s" $_ }
-
-    $cuIds = @()
-    foreach ($msg in $commitMessages) {
-        $matchedIds = [regex]::Matches($msg, $cuIdRegex)
-        foreach ($match in $matchedIds) {
-            $cuIds += $match.Groups[1].Value
-        }
+function Get-TaskIdsFromFile {
+    if (Test-Path $tasksListFile) {
+        $existingTasks = Get-Content $tasksListFile | Where-Object { $_.Trim() } 
+    } else {
+        $existingTasks = @()
     }
 
-    return $cuIds | Select-Object -Unique
+    return $existingTasks
+}
+
+function Write-WebError {
+    param(
+        [Parameter(Mandatory)][System.Net.WebException] $Exception
+    )
+
+    $stream = $Exception.Response.GetResponseStream()
+    $reader = New-Object System.IO.StreamReader($stream)
+    $reader.BaseStream.Position = 0
+    $reader.DiscardBufferedData()
+    $responseBody = $reader.ReadToEnd()
+    if ($responseBody) {
+        $err = ($responseBody | ConvertFrom-Json)
+        Write-Warning "[$TaskId] API error: $($err.err) (ECODE: $($err.ECODE))"
+    }
+    else {
+        Write-Warning "[$TaskId] HTTP error: $($_.Exception.Message)"
+    }
 }
 
 function Set-ClickUpFieldValue {
@@ -92,16 +95,7 @@ function Set-ClickUpFieldValue {
         return $true
     }
     catch [System.Net.WebException] {
-        $stream = $_.Exception.Response.GetResponseStream()
-        $responseBody = [System.IO.StreamReader]::new($stream).ReadToEnd()
-        if ($responseBody) {
-            $err = ($responseBody | ConvertFrom-Json)
-            Write-Warning "[$TaskId] API error: $($err.err) (ECODE: $($err.ECODE))"
-            Write-Host "ECODE 'OAUTH_019' usualy means wrong API key"
-        }
-        else {
-            Write-Warning "[$TaskId] HTTP error: $($_.Exception.Message)"
-        }
+        Write-WebError -Exception $_.Exception
         return $false
     }
     catch {
@@ -149,16 +143,7 @@ function Update-ClickUpTasks {
             }
         }
         catch [System.Net.WebException] {
-            $stream = $_.Exception.Response.GetResponseStream()
-            $responseBody = [System.IO.StreamReader]::new($stream).ReadToEnd()
-            if ($responseBody) {
-                $err = ($responseBody | ConvertFrom-Json)
-                Write-Warning "[$TaskId] API error: $($err.err) (ECODE: $($err.ECODE))"
-                Write-Host "ECODE 'OAUTH_019' usualy means wrong API key"
-            } 
-            else {
-                Write-Warning "[$TaskId] HTTP error: $($_.Exception.Message)"
-            }
+            Write-WebError -Exception $_.Exception
             return $false
         }
         catch {
@@ -168,17 +153,28 @@ function Update-ClickUpTasks {
     }
 }
 
+function Clear-TasksListFile {
+    if (Test-Path $tasksListFile) {
+        Remove-Item $tasksListFile -ErrorAction SilentlyContinue
+        Write-Host "Removed '$tasksListFile'"
+    } else {
+        Write-Host "No '$tasksListFile' to clear"
+    }
+}
+
 # Main Logic
 $projectName = Get-TranslatedProjectName -Name $TcProjectName
-$cuIds = Get-TaskIdsFromChanges
+$cuIds = Get-TaskIdsFromFile
 
 if ($cuIds.Length -gt 0) {
     Write-Host "Found $($cuIds.Length) CU tasks:"
     $cuIds | ForEach-Object { Write-Host "- $_" }
     Write-Host
 } else {
-    Write-Host "Couldn't find any new CU tasks"
+    Write-Host "Couldn't find any CU tasks"
     exit(0)
 }
 
 Update-ClickUpTasks -TaskIds $cuIds -ProjectName $projectName -BuildNumber $BuildNumber
+
+Clear-TasksListFile
