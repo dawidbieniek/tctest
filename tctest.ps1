@@ -174,7 +174,7 @@ if ($cuIds.Length -gt 0) {
     Write-Host "Couldn't find any CU tasks"
     exit(0)
 }
-exit(0)
-Update-ClickUpTasks -TaskIds $cuIds -ProjectName $projectName -BuildNumber $BuildNumber
+
+# Update-ClickUpTasks -TaskIds $cuIds -ProjectName $projectName -BuildNumber $BuildNumber
 
 Clear-TasksListFile
