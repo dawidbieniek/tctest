@@ -153,8 +153,8 @@ function Update-ClickUpTasks {
 }
 
 function Clear-TasksListFile {
-    if (Test-Path tasksListFile) {
-        Clear-Content tasksListFile
+    if (Test-Path $tasksListFile) {
+        Clear-Content $tasksListFile
         Write-Host "Cleared '$tasksListFile'"
     } else {
         Write-Host "No '$tasksListFile' to clear"

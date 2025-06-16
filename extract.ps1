@@ -23,16 +23,6 @@ function Get-TaskIdsFromChanges {
     return $cuIds | Select-Object -Unique
 }
 
-# Check for new tasks
-$newTasks = Get-TaskIdsFromChanges
-if ($newTasks.Length -gt 0) {
-    Write-Host "Found $($newTasks.Length) new CU tasks:"
-    $newTasks | ForEach-Object { Write-Host "- $_" }
-} else {
-    Write-Host "Couldn't find any new CU tasks"
-    exit(0)
-}
-
 # Check for old tasks
 if (Test-Path $tasksListFile) {
     $existingTasks = Get-Content $tasksListFile | Where-Object { $_.Trim() } 
@@ -43,6 +33,16 @@ if (Test-Path $tasksListFile) {
     }
 } else {
     $existingTasks = @()
+}
+
+# Check for new tasks
+$newTasks = Get-TaskIdsFromChanges
+if ($newTasks.Length -gt 0) {
+    Write-Host "Found $($newTasks.Length) new CU tasks:"
+    $newTasks | ForEach-Object { Write-Host "- $_" }
+} else {
+    Write-Host "Couldn't find any new CU tasks"
+    exit(0)
 }
 
 # Save tasks to file
