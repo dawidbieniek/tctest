@@ -1,30 +1,20 @@
 param(
     [CmdletBinding()]
     [Parameter(Mandatory = $true)][string] $BuildNumber,
-    [Parameter(Mandatory = $true)][string] $ChangesFilePath,
     [Parameter(Mandatory = $true)][string] $TcProjectName,
-    [Parameter(Mandatory = $true)][string] $CuApiKey,
-    [Parameter(Mandatory = $true)][string] $FilePath
+    [Parameter(Mandatory = $true)][string] $CuApiKey
 )
 
 # For tests
-# if ((Get-Random -Minimum 0 -Maximum 2) -eq 0) {
-#     throw "Random failure occurred."
-# }
-
-$file = "tasks.txt"
-if (-Not (Test-Path $file)) {
-  Write-Host "!!! No tasks.txt found — did the dependency pull it?"
-} else {
-    Write-Host "Read: $(Get-Content $file)"
-    $tasks = Get-Content $file | Where-Object { $_.Trim() }
-    Write-Host "Read $($tasks.Count) tasks from tasks.txt"
+if ((Get-Random -Minimum 0 -Maximum 2) -eq 0) {
+    throw "Random failure occurred."
 }
-exit(0)
+
 # Constants
+$tasksListFile  = 'tasks.txt'
+
 $projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - displayName
 $projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[0-9][A-Za-z0-9\.\-]*" # 0 - projectName
-$cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
 
 $getTaskUrl = "https://api.clickup.com/api/v2/task/{0}" # 0 - taskId
 $getTaskHeaders = @{
@@ -60,20 +50,14 @@ function Get-TranslatedProjectName {
     return $Name
 }
 
-function Get-TaskIdsFromChanges {
-    $changedFiles = Get-Content $ChangesFilePath
-    $uniqueRevs = $changedFiles | ForEach-Object { ($_ -split ':')[-1] } | Select-Object -Unique
-    $commitMessages = $uniqueRevs | ForEach-Object { git log -1 --format="%s" $_ }
-
-    $cuIds = @()
-    foreach ($msg in $commitMessages) {
-        $matchedIds = [regex]::Matches($msg, $cuIdRegex)
-        foreach ($match in $matchedIds) {
-            $cuIds += $match.Groups[1].Value
-        }
+function Get-TaskIdsFromFile {
+    if (Test-Path $tasksListFile) {
+        $existingTasks = Get-Content $tasksListFile | Where-Object { $_.Trim() } 
+    } else {
+        $existingTasks = @()
     }
 
-    return $cuIds | Select-Object -Unique
+    return $existingTasks
 }
 
 function Set-ClickUpFieldValue {
@@ -168,17 +152,28 @@ function Update-ClickUpTasks {
     }
 }
 
+function Clear-TasksListFile {
+    if (Test-Path tasksListFile) {
+        Clear-Content tasksListFile
+        Write-Host "Cleared '$tasksListFile'"
+    } else {
+        Write-Host "No '$tasksListFile' to clear"
+    }
+}
+
 # Main Logic
 $projectName = Get-TranslatedProjectName -Name $TcProjectName
-$cuIds = Get-TaskIdsFromChanges
+$cuIds = Get-TaskIdsFromFille
 
 if ($cuIds.Length -gt 0) {
     Write-Host "Found $($cuIds.Length) CU tasks:"
     $cuIds | ForEach-Object { Write-Host "- $_" }
     Write-Host
 } else {
-    Write-Host "Couldn't find any new CU tasks"
+    Write-Host "Couldn't find any CU tasks"
     exit(0)
 }
 
 Update-ClickUpTasks -TaskIds $cuIds -ProjectName $projectName -BuildNumber $BuildNumber
+
+Clear-TasksListFile
