@@ -7,8 +7,16 @@ param(
 )
 
 # For tests
-if ((Get-Random -Minimum 0 -Maximum 2) -eq 0) {
-    throw "Random failure occurred."
+# if ((Get-Random -Minimum 0 -Maximum 2) -eq 0) {
+#     throw "Random failure occurred."
+# }
+
+$file = "$Env:TEAMCITY_BUILD_CHECKOUTDIR\tasks.txt"
+if (-Not (Test-Path $file)) {
+  Write-Host "!!! No tasks.txt found — did the dependency pull it?"
+} else {
+    $tasks = Get-Content $file | Where-Object { $_.Trim() }
+    Write-Host "Read $($tasks.Count) tasks from tasks.txt"
 }
 
 # Constants
@@ -42,11 +50,11 @@ function Get-TranslatedProjectName {
     param([string]$Name)
 
     if ($projectNameMap.ContainsKey($Name)) {
-        Write-Host "Using $($projectNameMap[$Name]) as project name"
+        Write-Host "Using '$($projectNameMap[$Name])'as project name"
         return $projectNameMap[$Name]
     }
 
-    Write-Warning "Couldn't find ${Name} in project name map"
+    Write-Warning "Couldn't find '${Name}' in project name map"
     return $Name
 }
 
