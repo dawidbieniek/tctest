@@ -22,7 +22,7 @@ function Get-TaskIdsFromChanges {
 }
 
 $tasks = Get-TaskIdsFromChanges
-$outFile = "$FilePath/tasks.txt"
+$outFile = "tasks.txt"
 
 Write-Host $outFile
 

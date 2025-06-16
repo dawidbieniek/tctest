@@ -12,7 +12,7 @@ param(
 #     throw "Random failure occurred."
 # }
 
-$file = "$FilePath/tasks.txt"
+$file = "tasks.txt"
 if (-Not (Test-Path $file)) {
   Write-Host "!!! No tasks.txt found — did the dependency pull it?"
 } else {
