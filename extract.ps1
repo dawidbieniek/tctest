@@ -49,5 +49,5 @@ if ($newTasks.Length -gt 0) {
 $allTasks = $existingTasks + $newTasks | Select-Object -Unique
 
 $allTasks | Out-File -FilePath $tasksListFile -Encoding UTF8
-Write-Host "Written $($allTasks.Count) tasks to '${tasksListFile}':"
+Write-Host "Saved $($allTasks.Count) tasks to '${tasksListFile}':"
 $allTasks | ForEach-Object { Write-Host "- $_" }
