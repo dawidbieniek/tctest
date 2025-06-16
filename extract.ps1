@@ -1,8 +1,8 @@
 param(
     [CmdletBinding()]
-    [Parameter(Mandatory = $true)][string] $ChangesFilePath,
-    [Parameter(Mandatory = $true)][string] $TeamcityUrl,
-    [Parameter(Mandatory = $true)][string] $BuildTypeId,
+    [Parameter(Mandatory)][string] $ChangesFilePath,
+    [Parameter(Mandatory)][string] $TeamcityUrl,
+    [Parameter(Mandatory)][string] $BuildTypeId,
     [Parameter(Mandatory)][string] $BranchName
 )
 
@@ -64,6 +64,7 @@ function Get-TaskIdsFromChanges {
     return $cuIds | Select-Object -Unique
 }
 
+# Check for old tasks
 $existingTasks = Get-TaskIdsFromLastBuild
 
 # Check for new tasks
