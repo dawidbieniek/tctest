@@ -5,6 +5,8 @@ param(
 )
 
 
+$cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
+
 function Get-TaskIdsFromChanges {
     $changedFiles = Get-Content $ChangesFilePath
 
