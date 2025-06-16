@@ -18,8 +18,19 @@ $headers = @{
 
 function Get-TaskIdsFromLastBuild {
     $downloadUrl = "$TeamcityUrl/repository/download/$BuildTypeId/.lastFinished/${tasksListFile}?branch=$BranchName"
-    $artifactResponse = Invoke-RestMethod -Uri $downloadUrl -Headers $headers;
-   
+    
+    try {
+        $artifactResponse = Invoke-RestMethod -Uri $downloadUrl -Headers $headers;
+    } 
+    catch {
+        if ($_.Exception.Response.StatusCode.Value__ -eq 404) {
+            return @()
+        }
+        else {
+            throw $_.Exception
+        }
+    }
+
     if ($artifactResponse -is [string]) {
         $existingTasks = $artifactResponse -split "\r?\n" | Where-Object { $_.Trim() -ne "" }
     } elseif ($resp -is [string[]]) {
