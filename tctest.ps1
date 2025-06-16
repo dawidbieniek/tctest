@@ -6,7 +6,7 @@ param(
 )
 
 # For tests
-if ((Get-Random -Minimum 0 -Maximum 3) -gt 1) {
+if ((Get-Random -Minimum 0 -Maximum 3) -gt 0) {
     throw "Random failure occurred."
 }
 
