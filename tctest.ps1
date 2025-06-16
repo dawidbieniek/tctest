@@ -5,6 +5,10 @@ param(
   [string] [Parameter(Mandatory=$true)] $CuApiKey
 )
 
+if ((Get-Random -Minimum 0 -Maximum 2) -eq 0) {
+    throw "Random failure occurred."
+}
+
 $apiKeyErrorCode = "OAUTH_019"
 $projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[0-9][A-Za-z0-9\.\-]*" # 0 - projectName
 $projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - projectName
