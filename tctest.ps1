@@ -1,8 +1,9 @@
 param(
     [CmdletBinding()]
-    [Parameter(Mandatory = $true)][string] $BuildNumber,
-    [Parameter(Mandatory = $true)][string] $TcProjectName,
-    [Parameter(Mandatory = $true)][string] $CuApiKey
+    [Parameter(Mandatory)][string] $BuildNumber,
+    [Parameter(Mandatory)][string] $TcProjectName,
+    [Parameter(Mandatory)][string] $CuApiKey,
+    [Parameter(Mandatory)][string] $BranchName
 )
 
 # For tests
@@ -37,6 +38,16 @@ $projectNameMap = @{
     "InnyProjekt" = "Nowy"
     "Tctest"    = "Stary"
 }
+
+$teamcityUrl     = "http://teamcity-server:8111"
+$buildTypeId     = $TcProjectName  # or pass a separate config ID
+$outputFile      = "tasks.txt"
+
+# API endpoint for last finished build artifact on a branch
+$downloadUrl = "$teamcityUrl/httpAuth/repository/download/$buildTypeId/.lastFinished/$artifactPath?branch=$BranchName"
+
+$resp = Invoke-RestMethod -Uri $downloadUrl -OutFile $outputFile;
+Write-Host $resp
 
 function Get-TranslatedProjectName {
     param([string]$Name)
