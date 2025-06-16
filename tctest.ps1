@@ -119,7 +119,7 @@ foreach ($taskId in $cuIds) {
 		
 		Write-Host "($taskId) changing Release field to '$releaseValue'"
 		
-		if (-not (Set-ClickUpFieldValue -TaskId $taskId -FieldId $fieldId -Value $releaseValue)) {
+		if (-not (Set-ClickUpFieldValue -TaskId $taskId -FieldId $releaseField -Value $releaseValue)) {
 			Write-Warning "[$taskId] Failed to set Release field."
 		}
 	}
