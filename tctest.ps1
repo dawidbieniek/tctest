@@ -5,6 +5,11 @@ param(
     [Parameter(Mandatory = $true)][string] $CuApiKey
 )
 
+# For tests
+if ((Get-Random -Minimum 0 -Maximum 2) -eq 0) {
+    throw "Random failure occurred."
+}
+
 # Constants
 $tasksListFile  = 'tasks.txt'
 
