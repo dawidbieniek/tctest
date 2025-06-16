@@ -16,6 +16,7 @@ $file = "tasks.txt"
 if (-Not (Test-Path $file)) {
   Write-Host "!!! No tasks.txt found — did the dependency pull it?"
 } else {
+    Write-Host "Read: $(Get-Content $file)"
     $tasks = Get-Content $file | Where-Object { $_.Trim() }
     Write-Host "Read $($tasks.Count) tasks from tasks.txt"
 }

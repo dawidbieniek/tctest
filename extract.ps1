@@ -27,5 +27,6 @@ $outFile = "tasks.txt"
 Write-Host $outFile
 
 $tasks | Out-File -FilePath $outFile -Encoding UTF8
+Write-Host "Written: $(Get-Content $outFile)"
 
 Write-Host "Saved $($tasks.Count) tasks to tasks.txt"
