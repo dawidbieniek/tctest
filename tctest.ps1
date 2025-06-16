@@ -39,16 +39,6 @@ $projectNameMap = @{
     "Tctest"    = "Stary"
 }
 
-$teamcityUrl     = "http://teamcity-server:8111"
-$buildTypeId     = $TcProjectName  # or pass a separate config ID
-$outputFile      = "tasks.txt"
-
-# API endpoint for last finished build artifact on a branch
-$downloadUrl = "$teamcityUrl/httpAuth/repository/download/$buildTypeId/.lastFinished/$artifactPath?branch=$BranchName"
-
-$resp = Invoke-RestMethod -Uri $downloadUrl -OutFile $outputFile;
-Write-Host $resp
-
 function Get-TranslatedProjectName {
     param([string]$Name)
 
