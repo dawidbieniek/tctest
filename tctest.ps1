@@ -93,7 +93,7 @@ function Get-PerviousBuildsRevs {
         }
     }
 
-    return $faliedBuildRevs | Select-Obejct -Unique
+    return $faliedBuildRevs | Select-Object -Unique
 }
 
 function Get-CurrentBuildRevs {
