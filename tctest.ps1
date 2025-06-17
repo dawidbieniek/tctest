@@ -7,20 +7,19 @@ param(
     [Parameter(Mandatory)][string] $BranchName,
     [Parameter(Mandatory)][string] $TeamcityUrl,
     [Parameter(Mandatory)][string] $TcApiKey,
-    [Parameter(Mandatory)][string] $BuildTypeId,
-    [Parameter][bool] $Testing
+    [Parameter(Mandatory)][string] $BuildTypeId
 )
 
 # Regex
 $cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
-$projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - displayName
+$projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - projectName
 $projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[0-9][A-Za-z0-9\.\-]*" # 0 - projectName
 
 # Teamcity rest api
 $tcHeaders = @{
   "Authorization" = "Bearer $TcApiKey"
 }
-$tcGetBuildsUrl  = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:20&fields=build(id,status)"
+$tcGetBuildsUrl  = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:20&fields=build(id,status)" # Assuming there won't be more than 20 failed builds in a row
 $tcGetChangesUrl = "$TeamcityUrl/app/rest/changes?locator=build:(id:{0})&fields=change(version)" # 0 - buildId
 
 # Clickup
@@ -160,31 +159,31 @@ function Update-ClickUpTasks {
 
             # Project present with build number
             if ($releaseValue -match ($projectAlreadyHasBuidNrRegex -f $ProjectName)) {
-                $releaseValue = $releaseValue -replace ($projectAlreadyHasBuidNrRegex -f $ProjectName), "${ProjectName}: 3.0.$BuildNumber"
+                $releaseValue = $releaseValue -replace ($projectAlreadyHasBuidNrRegex -f $ProjectName), "${ProjectName} - 3.0.$BuildNumber"
             }
             # Project present without build number
             elseif ($releaseValue -match ($projectAlreadyIsPresentWithoutBuildNrRegex -f $ProjectName)) {
-                $releaseValue = $releaseValue -replace ($projectAlreadyIsPresentWithoutBuildNrRegex -f $ProjectName), "${ProjectName}: 3.0.$BuildNumber"
+                $releaseValue = $releaseValue -replace ($projectAlreadyIsPresentWithoutBuildNrRegex -f $ProjectName), "${ProjectName} - 3.0.$BuildNumber"
             }
             # Field is empty
             elseif ([string]::IsNullOrWhiteSpace($releaseValue)) {
-                $releaseValue = "${ProjectName}: 3.0.$BuildNumber"
+                $releaseValue = "${ProjectName} - 3.0.$BuildNumber"
             }
             # Field contains text
             else {
-                $releaseValue = "${ProjectName}: 3.0.$BuildNumber, $releaseValue"
+                $releaseValue = "${ProjectName} - 3.0.$BuildNumber, $releaseValue"
             }
 
             Write-Host "[$taskId] changing Release field to '$releaseValue'"
 
-            if ($Testing -eq $true) { continue; }
-
-            if (Set-ClickUpFieldValue -TaskId $taskId -FieldId $releaseField.id -Value $releaseValue) {
-                Write-Host "[$taskId] Successfully updated field to '$releaseValue'"
-            }
-            else {
-                Write-Warning "[$taskId] Failed to set Release field."
-            }
+			#### Don't update CU fields during testing ####
+            # if (Set-ClickUpFieldValue -TaskId $taskId -FieldId $releaseField.id -Value $releaseValue) {
+                # Write-Host "[$taskId] Successfully updated field to '$releaseValue'"
+            # }
+            # else {
+                # Write-Warning "[$taskId] Failed to set Release field."
+            # }
+			###########################################
         }
         catch [System.Net.WebException] {
             Write-WebError -Exception $_.Exception
