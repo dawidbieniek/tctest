@@ -24,7 +24,8 @@ $tcHeaders = @{
 }
 # $tcGetBuildsUrl  = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:20&fields=build(id,status)"
 $tcGetBuildsUrl  = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:2&fields=build(id,status)"
-$tcGetChangesUrl = "$TeamcityUrl/app/rest/changes?locator=build:(id:{0})&fields=change(version)" # 0 - buildId
+# $tcGetChangesUrl = "$TeamcityUrl/app/rest/changes?locator=build:(id:{0})&fields=change(version)" # 0 - buildId
+$tcGetChangesUrl = "$TeamcityUrl/app/rest/changes?locator=build:(id:{0})" # 0 - buildId
 
 # Clickup
 $getTaskHeaders = @{
@@ -91,8 +92,8 @@ function Get-PerviousBuildsRevs {
 
         Write-Host "URL: $(($tcGetChangesUrl -f $build.id))"
         $changes = Invoke-RestMethod -Method Get -Uri ($tcGetChangesUrl -f $build.id) -Headers $headers
-        write-host "changes version"
-        $changes.changes.change.version
+        write-host "changes"
+        $changes.changes
 
         foreach ($change in $changes.changes.change) {
             Write-Host $change.version
@@ -218,8 +219,8 @@ if ($previousCuIds.Count -gt 0) {
 
 $currentRevs = Get-CurrentBuildRevs
 $currentCuIds = Get-TaskIdsFromRevs -Revs $currentRevs
-if ($currentCuIds.Length -gt 0) {
-    Write-Host "Found new $($currentCuIds.Length) CU tasks:"
+if ($currentCuIds.Count -gt 0) {
+    Write-Host "Found new $($currentCuIds.Count) CU tasks:"
     $currentCuIds | ForEach-Object { Write-Host "- $_" }
 }
 
