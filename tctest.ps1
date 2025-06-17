@@ -11,9 +11,9 @@ param(
 )
 
 # For tests
-# if ((Get-Random -Minimum 0 -Maximum 2) -gt 0) {
-#     throw "Random failure occurred."
-# }
+if ((Get-Random -Minimum 0 -Maximum 2) -gt 0) {
+    throw "Random failure occurred."
+}
 
 # Regex
 $cuIdRegex      = '(?i)CU-([A-Za-z0-9]+)'
@@ -108,17 +108,13 @@ function Get-TaskIdsFromRevs {
     param(
         [Parameter(Mandatory)][string[]] $Revs
     )
-    $commitMessages = @()
-
-    foreach ($rev in $Revs) {
-        if (![string]::IsNullOrWhiteSpace($rev)) {
-            $msg = git log -1 --format="%s" $rev
-            $commitMessages += $msg
-        }
-    }
+    if ($Revs.Count -eq 0) { return }
 
     $cuIds = @()
-    foreach ($msg in $commitMessages) {
+    foreach ($rev in $Revs) {
+        if ([string]::IsNullOrWhiteSpace($rev)) { continue }
+
+        $msg = git log -1 --format="%s" $rev
         $matchedIds = [regex]::Matches($msg, $cuIdRegex)
         foreach ($match in $matchedIds) {
             $cuIds += $match.Groups[1].Value
@@ -206,31 +202,18 @@ function Update-ClickUpTasks {
 $projectName = Get-TranslatedProjectName -Name $TcProjectName
 
 $previousRevs = Get-PerviousBuildsRevs
-write-host "Pervious: ($($previousRevs.Count))"
-$previousRevs
-if($previousRevs.Count -gt 0) {
 $previousCuIds = Get-TaskIdsFromRevs -Revs $previousRevs
 if ($previousCuIds.Count -gt 0) {
     Write-Warning "Found $($existingTasks.Count) tasks in previous builds. This state is valid only when previous builds failed or were stopped"
     Write-Host "Previous builds tasks:"
     $previousCuIds | ForEach-Object { Write-Host "- $_" }
 }
-}
 
 $currentRevs = Get-CurrentBuildRevs
-write-host "Current: $($currentRevs.Count)"
-
-$currentRevs
-
-if($currentRevs.Count -gt 0) {
 $currentCuIds = Get-TaskIdsFromRevs -Revs $currentRevs
-write-host "Current CUIDDS"
-$currentCuIds
-
 if ($currentCuIds.Length -gt 0) {
     Write-Host "Found new $($cuIds.Length) CU tasks:"
     $currentCuIds | ForEach-Object { Write-Host "- $_" }
-}
 }
 
 # Update-ClickUpTasks -TaskIds $cuIds -ProjectName $projectName -BuildNumber $BuildNumber
