@@ -16,6 +16,19 @@ $headers = @{
   "Authorization" = "Bearer $tcApiToken"
 }
 
+$locator  = "buildType:$BuildTypeId,branch:$BranchName,state:finished,status:any,count:20"
+$builds   = Invoke-RestMethod "$TeamcityUrl/app/rest/builds?locator=$locator" -Headers $headers
+$aggregated = @()
+foreach ($b in $builds.builds.build) {
+  if ($b.status -eq 'SUCCESS') { break }
+  $changesUrl = "$TeamcityUrl/app/rest/changes?locator=build:(id:$($b.id))&fields=change(files(file(name,changeType)))"
+  $changes = Invoke-RestMethod $changesUrl -Headers $headers
+  foreach ($c in $changes.change) {
+    $aggregated += ,@{ file = $c.files.file.name; type = $c.files.file.changeType }
+  }
+}
+
+
 function Get-TaskIdsFromLastBuild {
     $downloadUrl = "$TeamcityUrl/repository/download/$BuildTypeId/.lastFinished/${tasksListFile}?branch=$BranchName"
     

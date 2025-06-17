@@ -3,32 +3,41 @@ param(
     [Parameter(Mandatory)][string] $BuildNumber,
     [Parameter(Mandatory)][string] $TcProjectName,
     [Parameter(Mandatory)][string] $CuApiKey,
-    [Parameter(Mandatory)][string] $BranchName
+    [Parameter(Mandatory)][string] $BranchName,
+    [Parameter(Mandatory)][string] $TeamcityUrl,
+    [Parameter(Mandatory)][string] $TcApiKey,
+    [Parameter(Mandatory)][string] $BuildTypeId
 )
 
 # For tests
-if ((Get-Random -Minimum 0 -Maximum 2) -gt 0) {
-    throw "Random failure occurred."
-}
+# if ((Get-Random -Minimum 0 -Maximum 2) -gt 0) {
+#     throw "Random failure occurred."
+# }
 
-# Constants
-$tasksListFile  = 'tasks.txt'
-
+# Regex
 $projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - displayName
 $projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[0-9][A-Za-z0-9\.\-]*" # 0 - projectName
 
-$getTaskUrl = "https://api.clickup.com/api/v2/task/{0}" # 0 - taskId
+# Teamcity rest api
+$tcHeaders = @{
+  "Authorization" = "Bearer $TcApiKey"
+}
+$tcGetBuildsUrl = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:20&fields=build(id,status)"
+$tcGetChangesUrl = "$TeamcityUrl/app/rest/changes?locator=build:(id:{0})&fields=change(version)" # 0 - buildId
+
+# Clickup
 $getTaskHeaders = @{
     'Authorization' = $CuApiKey
     'Accept'        = 'application/json'
 }
+$getTaskUrl = "https://api.clickup.com/api/v2/task/{0}" # 0 - taskId
 
-$postFieldValueUrl = "https://api.clickup.com/api/v2/task/{0}/field/{1}" # 0 - taskId; 1 - fieldId
 $postFieldValueHeaders = @{
     'Authorization' = $CuApiKey
     'Accept'        = 'application/json'
     'Content-Type'  = 'application/json'
 }
+$postFieldValueUrl = "https://api.clickup.com/api/v2/task/{0}/field/{1}" # 0 - taskId; 1 - fieldId
 
 # Project name mapping
 $projectNameMap = @{
@@ -51,16 +60,6 @@ function Get-TranslatedProjectName {
     return $Name
 }
 
-function Get-TaskIdsFromFile {
-    if (Test-Path $tasksListFile) {
-        $existingTasks = Get-Content $tasksListFile | Where-Object { $_.Trim() } 
-    } else {
-        $existingTasks = @()
-    }
-
-    return $existingTasks
-}
-
 function Write-WebError {
     param(
         [Parameter(Mandatory)][System.Net.WebException] $Exception
@@ -78,6 +77,47 @@ function Write-WebError {
     else {
         Write-Warning "[$TaskId] HTTP error: $($_.Exception.Message)"
     }
+}
+
+function Get-PerviousBuildsRevs {
+    $lastBuilds = Invoke-RestMethod -Method Get -Uri $tcGetBuildsUrl -Headers $tcHeaders
+    $faliedBuildRevs = @()
+    foreach ($build in $lastBuilds.builds.build) {
+        if ($build.status -eq 'SUCCESS') { 
+            break 
+        }
+
+        $changes = Invoke-RestMethod -Method Get -Uri ($tcGetChangesUrl -f $build.id) -Headers $headers
+        foreach ($rev in $changes.change.change.version) {
+            $faliedBuildRevs += $rev
+        }
+    }
+
+    return $faliedBuildRevs | Select-Obejct -Unique
+}
+
+function Get-CurrentBuildRevs {
+    $changedFiles = Get-Content $ChangesFilePath
+    $revs = $changedFiles | ForEach-Object { ($_ -split ':')[-1] } 
+    return $revs | Select-Object -Unique
+}
+
+function Get-TaskIdsFromRevs {
+    param(
+        [Parameter(Mandatory)][string[]] $Revs
+    )
+    $commitMessages = $Revs | ForEach-Object { git log -1 --format="%s" $_ }
+
+    $cuIds = @()
+    foreach ($msg in $commitMessages) {
+        $matchedIds = [regex]::Matches($msg, $cuIdRegex)
+        foreach ($match in $matchedIds) {
+            $cuIds += $match.Groups[1].Value
+        }
+    }
+
+    return $cuIds | Select-Object -Unique
+
 }
 
 function Set-ClickUpFieldValue {
@@ -154,28 +194,23 @@ function Update-ClickUpTasks {
     }
 }
 
-function Clear-TasksListFile {
-    if (Test-Path $tasksListFile) {
-        Remove-Item $tasksListFile -ErrorAction SilentlyContinue
-        Write-Host "Removed '$tasksListFile'"
-    } else {
-        Write-Host "No '$tasksListFile' to clear"
-    }
-}
-
 # Main Logic
 $projectName = Get-TranslatedProjectName -Name $TcProjectName
-$cuIds = Get-TaskIdsFromFile
 
-if ($cuIds.Length -gt 0) {
-    Write-Host "Found $($cuIds.Length) CU tasks:"
-    $cuIds | ForEach-Object { Write-Host "- $_" }
-    Write-Host
-} else {
-    Write-Host "Couldn't find any CU tasks"
-    exit(0)
+$previousRevs = Get-PerviousBuildsRevs
+$previousCuIds = Get-TaskIdsFromRevs -Revs $previousRevs
+if ($previousCuIds.Count -gt 0) {
+    Write-Warning "Found $($existingTasks.Count) tasks in previous builds. This state is valid only when previous builds failed or were stopped"
+    Write-Host "Previous builds tasks:"
+    $previousCuIds | ForEach-Object { Write-Host "- $_" }
+}
+
+$currentRevs = Get-CurrentBuildRevs
+$currentCuIds = Get-TaskIdsFromRevs -Revs $currentRevs
+
+if ($currentCuIds.Length -gt 0) {
+    Write-Host "Found new $($cuIds.Length) CU tasks:"
+    $currentCuIds | ForEach-Object { Write-Host "- $_" }
 }
 
 # Update-ClickUpTasks -TaskIds $cuIds -ProjectName $projectName -BuildNumber $BuildNumber
-
-Clear-TasksListFile
