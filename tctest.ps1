@@ -11,9 +11,6 @@ param(
     [Parameter][bool] $Testing
 )
 
-# For tests
-# throw "Random failure occurred."
-
 # Regex
 $cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
 $projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - displayName
@@ -44,9 +41,7 @@ $postFieldValueUrl = "https://api.clickup.com/api/v2/task/{0}/field/{1}" # 0 - t
 $projectNameMap = @{
     "Emplo"     = "TMS"
     "Admin2"    = "Admin"
-    "??wallapi" = "Wall"
-    "InnyProjekt" = "Nowy"
-    "Tctest"    = "Stary"
+    "Build Wallapi Docker" = "Wall"
 }
 
 function Get-TranslatedProjectName {
@@ -136,7 +131,6 @@ function Set-ClickUpFieldValue {
 
     try {
         Invoke-RestMethod -Method Post -Uri $url -Headers $postFieldValueHeaders -Body $body
-        Write-Host "[$TaskId] Successfully updated field to '$Value'"
         return $true
     }
     catch [System.Net.WebException] {
@@ -185,8 +179,11 @@ function Update-ClickUpTasks {
 
             if ($Testing -eq $true) { continue; }
 
-            if (-not (Set-ClickUpFieldValue -TaskId $taskId -FieldId $releaseField.id -Value $releaseValue)) {
+            if (Set-ClickUpFieldValue -TaskId $taskId -FieldId $releaseField.id -Value $releaseValue) {
                 Write-Warning "[$taskId] Failed to set Release field."
+            }
+            else {
+                Write-Host "[$taskId] Successfully updated field to '$releaseValue'"
             }
         }
         catch [System.Net.WebException] {
