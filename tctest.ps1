@@ -218,4 +218,5 @@ if ($currentCuIds.Count -gt 0) {
     $currentCuIds | ForEach-Object { Write-Host "- $_" }
 }
 
-Update-ClickUpTasks -TaskIds $cuIds -ProjectName $projectName -BuildNumber $BuildNumber
+$allCuIds = (($currentRevs ?? @()) + ($previousRevs ?? @())) | Select-Object -Unique
+Update-ClickUpTasks -TaskIds $allCuIds -ProjectName $projectName -BuildNumber $BuildNumber
