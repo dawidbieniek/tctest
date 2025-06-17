@@ -93,7 +93,8 @@ function Get-PerviousBuildsRevs {
         Write-Host "Found failed build: $($build.id)"
 
         $changes = Invoke-RestMethod -Method Get -Uri ($tcGetChangesUrl -f $build.id) -Headers $headers
-        foreach ($change in $changes.changes.change) {
+        foreach ($change in $changes.changes.change.version) {
+            Write-Host $change
             $faliedBuildRevs += $change
         }
     }
@@ -108,9 +109,9 @@ function Get-CurrentBuildRevs {
 
 function Get-TaskIdsFromRevs {
     param(
-        [Parameter(Mandatory)][string[]] $Revs
+        [string[]] $Revs
     )
-    if ($Revs.Count -eq 0) { return }
+    if (-not $Revs -or $Revs.Count -eq 0) { return }
 
     $cuIds = @()
     foreach ($rev in $Revs) {
@@ -214,7 +215,7 @@ if ($previousCuIds.Count -gt 0) {
 $currentRevs = Get-CurrentBuildRevs
 $currentCuIds = Get-TaskIdsFromRevs -Revs $currentRevs
 if ($currentCuIds.Length -gt 0) {
-    Write-Host "Found new $($cuIds.Length) CU tasks:"
+    Write-Host "Found new $($currentCuIds.Length) CU tasks:"
     $currentCuIds | ForEach-Object { Write-Host "- $_" }
 }
 
