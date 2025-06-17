@@ -91,6 +91,18 @@ function Get-PerviousBuildsRevs {
         Write-Host "Found failed build: $($build.id)"
 
         $changes = Invoke-RestMethod -Method Get -Uri ($tcGetChangesUrl -f $build.id) -Headers $headers
+        Write-Warning "Changes"
+        $changes
+        Write-Warning "Changes.Changes"
+        $changes.changes
+        
+        Write-Warning "Changes.Changes.Change"
+        $changes.changes.Change
+        
+        
+        Write-Warning "Changes.Changes.Change.Version"
+        $changes.changes.Change.Version
+
         foreach ($change in $changes.changes.change.version) {
             Write-Host $change
             $faliedBuildRevs += $change
