@@ -16,6 +16,7 @@ param(
 # }
 
 # Regex
+$cuIdRegex      = '(?i)CU-([A-Za-z0-9]+)'
 $projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - displayName
 $projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[0-9][A-Za-z0-9\.\-]*" # 0 - projectName
 
@@ -113,7 +114,6 @@ function Get-TaskIdsFromRevs {
         if (![string]::IsNullOrWhiteSpace($rev)) {
             $msg = git log -1 --format="%s" $rev
             $commitMessages += $msg
-            Write-Host $msg
         }
     }
 
@@ -122,7 +122,6 @@ function Get-TaskIdsFromRevs {
         $matchedIds = [regex]::Matches($msg, $cuIdRegex)
         foreach ($match in $matchedIds) {
             $cuIds += $match.Groups[1].Value
-            write-host $match.Groups[1].Value
         }
     }
 
@@ -225,6 +224,8 @@ $currentRevs
 
 if($currentRevs.Count -gt 0) {
 $currentCuIds = Get-TaskIdsFromRevs -Revs $currentRevs
+write-host "Current CUIDDS"
+$currentCuIds
 
 if ($currentCuIds.Length -gt 0) {
     Write-Host "Found new $($cuIds.Length) CU tasks:"
