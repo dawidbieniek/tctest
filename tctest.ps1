@@ -1,5 +1,6 @@
 param(
     [CmdletBinding()]
+    [Parameter(Mandatory)][string] $ChangesFilePath,
     [Parameter(Mandatory)][string] $BuildNumber,
     [Parameter(Mandatory)][string] $TcProjectName,
     [Parameter(Mandatory)][string] $CuApiKey,
@@ -81,6 +82,8 @@ function Write-WebError {
 
 function Get-PerviousBuildsRevs {
     $lastBuilds = Invoke-RestMethod -Method Get -Uri $tcGetBuildsUrl -Headers $tcHeaders
+write-host "Builds:"
+
     write-host $lastBuilds
 
     $faliedBuildRevs = @()
@@ -94,6 +97,8 @@ function Get-PerviousBuildsRevs {
             $faliedBuildRevs += $rev
         }
     }
+write-host "Failed revs:"
+write-host $faliedBuildRevs | Select-Object -Unique
 
     return $faliedBuildRevs | Select-Object -Unique
 }
@@ -200,6 +205,7 @@ function Update-ClickUpTasks {
 $projectName = Get-TranslatedProjectName -Name $TcProjectName
 
 $previousRevs = Get-PerviousBuildsRevs
+write-host "Pervious:"
 write-host $previousRevs
 if($previousRevs.Count -gt 0) {
 $previousCuIds = Get-TaskIdsFromRevs -Revs $previousRevs
@@ -211,6 +217,8 @@ if ($previousCuIds.Count -gt 0) {
 }
 
 $currentRevs = Get-CurrentBuildRevs
+write-host "Current:"
+
 write-host $currentRevs
 
 if($previousRevs.Count -gt 0) {
