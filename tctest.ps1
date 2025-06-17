@@ -81,6 +81,8 @@ function Write-WebError {
 
 function Get-PerviousBuildsRevs {
     $lastBuilds = Invoke-RestMethod -Method Get -Uri $tcGetBuildsUrl -Headers $tcHeaders
+    write-host $lastBuilds
+
     $faliedBuildRevs = @()
     foreach ($build in $lastBuilds.builds.build) {
         if ($build.status -eq 'SUCCESS') { 
@@ -198,19 +200,26 @@ function Update-ClickUpTasks {
 $projectName = Get-TranslatedProjectName -Name $TcProjectName
 
 $previousRevs = Get-PerviousBuildsRevs
+write-host $previousRevs
+if($previousRevs.Count -gt 0) {
 $previousCuIds = Get-TaskIdsFromRevs -Revs $previousRevs
 if ($previousCuIds.Count -gt 0) {
     Write-Warning "Found $($existingTasks.Count) tasks in previous builds. This state is valid only when previous builds failed or were stopped"
     Write-Host "Previous builds tasks:"
     $previousCuIds | ForEach-Object { Write-Host "- $_" }
 }
+}
 
 $currentRevs = Get-CurrentBuildRevs
+write-host $currentRevs
+
+if($previousRevs.Count -gt 0) {
 $currentCuIds = Get-TaskIdsFromRevs -Revs $currentRevs
 
 if ($currentCuIds.Length -gt 0) {
     Write-Host "Found new $($cuIds.Length) CU tasks:"
     $currentCuIds | ForEach-Object { Write-Host "- $_" }
+}
 }
 
 # Update-ClickUpTasks -TaskIds $cuIds -ProjectName $projectName -BuildNumber $BuildNumber
