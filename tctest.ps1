@@ -11,6 +11,9 @@ param(
     [Parameter][bool] $Testing
 )
 
+# For tests
+throw "Random failure occurred."
+
 # Regex
 $cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
 $projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - displayName
@@ -201,10 +204,7 @@ function Update-ClickUpTasks {
 $projectName = Get-TranslatedProjectName -Name $TcProjectName
 
 $previousRevs = Get-PerviousBuildsRevs
-write-host "Prev revs:"
-$previousRevs | ForEach-Object { Write-Host "- $_" }
 $previousCuIds = Get-TaskIdsFromRevs -Revs $previousRevs
-write-host "Prev: $($previousCuIds.Count)"
 if ($previousCuIds.Count -gt 0) {
     Write-Warning "Found $($previousCuIds.Count) tasks in previous builds. This state is valid only when previous builds failed or were stopped"
     Write-Host "Previous builds tasks:"
