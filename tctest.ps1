@@ -180,10 +180,10 @@ function Update-ClickUpTasks {
             if ($Testing -eq $true) { continue; }
 
             if (Set-ClickUpFieldValue -TaskId $taskId -FieldId $releaseField.id -Value $releaseValue) {
-                Write-Warning "[$taskId] Failed to set Release field."
+                Write-Host "[$taskId] Successfully updated field to '$releaseValue'"
             }
             else {
-                Write-Host "[$taskId] Successfully updated field to '$releaseValue'"
+                Write-Warning "[$taskId] Failed to set Release field."
             }
         }
         catch [System.Net.WebException] {
