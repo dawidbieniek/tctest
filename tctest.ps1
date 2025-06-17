@@ -12,7 +12,7 @@ param(
 )
 
 # For tests
-# throw "Random failure occurred."
+throw "Random failure occurred."
 
 # Regex
 $cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
@@ -23,10 +23,8 @@ $projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[0-9][A-Za-z0-9\.
 $tcHeaders = @{
   "Authorization" = "Bearer $TcApiKey"
 }
-# $tcGetBuildsUrl  = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:20&fields=build(id,status)"
-$tcGetBuildsUrl  = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:2&fields=build(id,status)"
-# $tcGetChangesUrl = "$TeamcityUrl/app/rest/changes?locator=build:(id:{0})&fields=change(version)" # 0 - buildId
-$tcGetChangesUrl = "$TeamcityUrl/app/rest/changes?locator=build:(id:{0})" # 0 - buildId
+$tcGetBuildsUrl  = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:&fields=build(id,status)"
+$tcGetChangesUrl = "$TeamcityUrl/app/rest/changes?locator=build:(id:{0})&fields=change(version)" # 0 - buildId
 
 # Clickup
 $getTaskHeaders = @{
@@ -87,15 +85,13 @@ function Get-PerviousBuildsRevs {
 
     $faliedBuildRevs = @()
     foreach ($build in $lastBuilds.builds.build) {
-        # if ($build.status -eq 'SUCCESS') { break }
+        if ($build.status -eq 'SUCCESS') { break }
 
         Write-Host "Found failed build: $($build.id)"
 
-        Write-Host "URL: $(($tcGetChangesUrl -f $build.id))"
         $changes = Invoke-RestMethod -Method Get -Uri "$($tcGetChangesUrl -f $build.id)" -Headers $tcHeaders
 
         foreach ($change in $changes.changes.change.version) {
-            Write-Host $change
             $faliedBuildRevs += $change
         }
     }
@@ -213,7 +209,7 @@ $previousRevs | ForEach-Object { Write-Host "- $_" }
 $previousCuIds = Get-TaskIdsFromRevs -Revs $previousRevs
 write-host "Prev: $($previousCuIds.Count)"
 if ($previousCuIds.Count -gt 0) {
-    Write-Warning "Found $($existingTasks.Count) tasks in previous builds. This state is valid only when previous builds failed or were stopped"
+    Write-Warning "Found $($previousCuIds.Count) tasks in previous builds. This state is valid only when previous builds failed or were stopped"
     Write-Host "Previous builds tasks:"
     $previousCuIds | ForEach-Object { Write-Host "- $_" }
 }
