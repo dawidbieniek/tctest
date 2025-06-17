@@ -11,9 +11,7 @@ param(
 )
 
 # For tests
-if ((Get-Random -Minimum 0 -Maximum 2) -gt 0) {
     throw "Random failure occurred."
-}
 
 # Regex
 $cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
