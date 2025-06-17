@@ -136,7 +136,7 @@ function Set-ClickUpFieldValue {
 
     try {
         Invoke-RestMethod -Method Post -Uri $url -Headers $postFieldValueHeaders -Body $body
-        Write-Host "[$TaskId] Successfully updated field to '$Value'`n"
+        Write-Host "[$TaskId] Successfully updated field to '$Value'"
         return $true
     }
     catch [System.Net.WebException] {
