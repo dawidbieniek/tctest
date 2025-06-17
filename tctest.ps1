@@ -22,7 +22,8 @@ $projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[0-9][A-Za-z0-9\.
 $tcHeaders = @{
   "Authorization" = "Bearer $TcApiKey"
 }
-$tcGetBuildsUrl  = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:20&fields=build(id,status)"
+# $tcGetBuildsUrl  = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:20&fields=build(id,status)"
+$tcGetBuildsUrl  = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:2&fields=build(id,status)"
 $tcGetChangesUrl = "$TeamcityUrl/app/rest/changes?locator=build:(id:{0})&fields=change(version)" # 0 - buildId
 
 # Clickup
@@ -84,24 +85,12 @@ function Get-PerviousBuildsRevs {
 
     $faliedBuildRevs = @()
     foreach ($build in $lastBuilds.builds.build) {
-        if ($build.status -eq 'SUCCESS') { 
-            break 
-        }
+        # if ($build.status -eq 'SUCCESS') { break }
 
         Write-Host "Found failed build: $($build.id)"
 
+        Write-Host "URL: $(($tcGetChangesUrl -f $build.id))"
         $changes = Invoke-RestMethod -Method Get -Uri ($tcGetChangesUrl -f $build.id) -Headers $headers
-        Write-Warning "Changes"
-        $changes
-        Write-Warning "Changes.Changes"
-        $changes.changes
-        
-        Write-Warning "Changes.Changes.Change"
-        $changes.changes.Change
-        
-        
-        Write-Warning "Changes.Changes.Change.Version"
-        $changes.changes.Change.Version
 
         foreach ($change in $changes.changes.change.version) {
             Write-Host $change
