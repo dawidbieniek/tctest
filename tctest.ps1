@@ -16,7 +16,7 @@ if ((Get-Random -Minimum 0 -Maximum 2) -gt 0) {
 }
 
 # Regex
-$cuIdRegex      = '(?i)CU-([A-Za-z0-9]+)'
+$cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
 $projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - displayName
 $projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[0-9][A-Za-z0-9\.\-]*" # 0 - projectName
 
@@ -24,7 +24,7 @@ $projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[0-9][A-Za-z0-9\.
 $tcHeaders = @{
   "Authorization" = "Bearer $TcApiKey"
 }
-$tcGetBuildsUrl = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:20&fields=build(id,status)"
+$tcGetBuildsUrl  = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:20&fields=build(id,status)"
 $tcGetChangesUrl = "$TeamcityUrl/app/rest/changes?locator=build:(id:{0})&fields=change(version)" # 0 - buildId
 
 # Clickup
@@ -89,6 +89,8 @@ function Get-PerviousBuildsRevs {
         if ($build.status -eq 'SUCCESS') { 
             break 
         }
+
+        Write-Host "Found failed build: $($build.id)"
 
         $changes = Invoke-RestMethod -Method Get -Uri ($tcGetChangesUrl -f $build.id) -Headers $headers
         foreach ($change in $changes.changes.change) {
