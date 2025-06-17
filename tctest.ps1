@@ -163,23 +163,22 @@ function Update-ClickUpTasks {
             $response = Invoke-RestMethod -Method Get -Uri $url -Headers $getTaskHeaders
             $releaseField = $response.custom_fields | Where-Object { $_.name -eq "Release" }
             $releaseValue = if ($releaseField -and $releaseField.value) { $releaseField.value } else { "" }
-            write-host $releaseValue
 
             # Project present with build number
             if ($releaseValue -match ($projectAlreadyHasBuidNrRegex -f $ProjectName)) {
-                $releaseValue = $releaseValue -replace ($projectAlreadyHasBuidNrRegex -f $ProjectName), "${ProjectName}: $BuildNumber"
+                $releaseValue = $releaseValue -replace ($projectAlreadyHasBuidNrRegex -f $ProjectName), "${ProjectName}: 3.0.$BuildNumber"
             }
             # Project present without build number
             elseif ($releaseValue -match ($projectAlreadyIsPresentWithoutBuildNrRegex -f $ProjectName)) {
-                $releaseValue = $releaseValue -replace ($projectAlreadyIsPresentWithoutBuildNrRegex -f $ProjectName), "${ProjectName}: $BuildNumber"
+                $releaseValue = $releaseValue -replace ($projectAlreadyIsPresentWithoutBuildNrRegex -f $ProjectName), "${ProjectName}: 3.0.$BuildNumber"
             }
             # Field is empty
             elseif ([string]::IsNullOrWhiteSpace($releaseValue)) {
-                $releaseValue = "${ProjectName}: $BuildNumber"
+                $releaseValue = "${ProjectName}: 3.0.$BuildNumber"
             }
             # Field contains text
             else {
-                $releaseValue = "${ProjectName}: $BuildNumber, $releaseValue"
+                $releaseValue = "${ProjectName}: 3.0.$BuildNumber, $releaseValue"
             }
 
             Write-Host "[$taskId] changing Release field to '$releaseValue'"
