@@ -1,0 +1,10 @@
+-BuildNumber "%system.build.number%"
+-TcProjectName "%system.teamcity.projectName%"
+-CuApiKey "%CUApiKey%"
+-BranchName "%teamcity.build.branch%"
+-TcApiKey "%TcApiKey%"
+-TeamcityUrl "%teamcity.serverUrl%"
+-BuildTypeId "%system.teamcity.buildType.id%"
+-ChangesFilePath "%system.teamcity.build.changedFiles.file%"
+
+CUApiKey i TcApiKey muszą być dodane jako parametry

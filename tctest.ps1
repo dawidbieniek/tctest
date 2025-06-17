@@ -10,6 +10,8 @@ param(
     [Parameter(Mandatory)][string] $BuildTypeId
 )
 
+$releasePrefix = "3.0."
+
 # Regex
 $cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
 $projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - projectName
@@ -43,7 +45,7 @@ $projectNameMap = @{
     "Build Wallapi Docker" = "Wall"
 }
 
-function Get-TranslatedProjectName {
+function Get-MappedProjectName {
     param([string]$Name)
 
     if ($projectNameMap.ContainsKey($Name)) {
@@ -99,9 +101,8 @@ function Get-CurrentBuildRevs {
 }
 
 function Get-TaskIdsFromRevs {
-    param(
-        [string[]] $Revs
-    )
+    param([string[]] $Revs)
+	
     if (-not $Revs -or $Revs.Count -eq 0) { return }
 
     $cuIds = @()
@@ -144,9 +145,9 @@ function Set-ClickUpFieldValue {
 
 function Update-ClickUpTasks {
     param(
-        [string[]] $TaskIds,
-        [string] $ProjectName,
-        [string] $BuildNumber
+        [Parameter(Mandatory)][string[]] $TaskIds,
+        [Parameter(Mandatory)][string] $ProjectName,
+        [Parameter(Mandatory)][string] $BuildNumber
     )
 
     foreach ($taskId in $TaskIds) {
@@ -157,21 +158,22 @@ function Update-ClickUpTasks {
             $releaseField = $response.custom_fields | Where-Object { $_.name -eq "Release" }
             $releaseValue = if ($releaseField -and $releaseField.value) { $releaseField.value } else { "" }
 
+			$projectReleaseValue = "$ProjectName - $releasePrefix$BuildNumber"
             # Project present with build number
             if ($releaseValue -match ($projectAlreadyHasBuidNrRegex -f $ProjectName)) {
-                $releaseValue = $releaseValue -replace ($projectAlreadyHasBuidNrRegex -f $ProjectName), "${ProjectName} - 3.0.$BuildNumber"
+                $releaseValue = $releaseValue -replace ($projectAlreadyHasBuidNrRegex -f $ProjectName), "$projectReleaseValue"
             }
             # Project present without build number
             elseif ($releaseValue -match ($projectAlreadyIsPresentWithoutBuildNrRegex -f $ProjectName)) {
-                $releaseValue = $releaseValue -replace ($projectAlreadyIsPresentWithoutBuildNrRegex -f $ProjectName), "${ProjectName} - 3.0.$BuildNumber"
+                $releaseValue = $releaseValue -replace ($projectAlreadyIsPresentWithoutBuildNrRegex -f $ProjectName), "$projectReleaseValue"
             }
             # Field is empty
             elseif ([string]::IsNullOrWhiteSpace($releaseValue)) {
-                $releaseValue = "${ProjectName} - 3.0.$BuildNumber"
+                $releaseValue = "$projectReleaseValue"
             }
             # Field contains text
             else {
-                $releaseValue = "${ProjectName} - 3.0.$BuildNumber, $releaseValue"
+                $releaseValue = "$projectReleaseValue, $releaseValue"
             }
 
             Write-Host "[$taskId] changing Release field to '$releaseValue'"
@@ -195,7 +197,7 @@ function Update-ClickUpTasks {
 }
 
 # Main Logic
-$projectName = Get-TranslatedProjectName -Name $TcProjectName
+$projectName = Get-MappedProjectName -Name $TcProjectName
 
 $previousRevs = Get-PerviousBuildsRevs
 $previousCuIds = Get-TaskIdsFromRevs -Revs $previousRevs
