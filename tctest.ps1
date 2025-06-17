@@ -81,14 +81,7 @@ function Write-WebError {
 }
 
 function Get-PerviousBuildsRevs {
-    write-host "url:"
-    write-host $tcGetBuildsUrl
-    Write-Host "headers:"
-    write-host $tcHeaders
     $lastBuilds = Invoke-RestMethod -Method Get -Uri $tcGetBuildsUrl -Headers $tcHeaders
-write-host "Builds:"
-
-    $lastBuilds.builds.build
 
     $faliedBuildRevs = @()
     foreach ($build in $lastBuilds.builds.build) {
@@ -97,13 +90,10 @@ write-host "Builds:"
         }
 
         $changes = Invoke-RestMethod -Method Get -Uri ($tcGetChangesUrl -f $build.id) -Headers $headers
-        foreach ($rev in $changes.change.change.version) {
-            $faliedBuildRevs += $rev
+        foreach ($change in $changes.changes.change) {
+            $faliedBuildRevs += $change
         }
     }
-write-host "Failed revs:"
-write-host $faliedBuildRevs | Select-Object -Unique
-
     return $faliedBuildRevs | Select-Object -Unique
 }
 
@@ -117,18 +107,26 @@ function Get-TaskIdsFromRevs {
     param(
         [Parameter(Mandatory)][string[]] $Revs
     )
-    $commitMessages = $Revs | ForEach-Object { git log -1 --format="%s" $_ }
+    $commitMessages = @()
+
+    foreach ($rev in $Revs) {
+        if (![string]::IsNullOrWhiteSpace($rev)) {
+            $msg = git log -1 --format="%s" $rev
+            $commitMessages += $msg
+            Write-Host $msg
+        }
+    }
 
     $cuIds = @()
     foreach ($msg in $commitMessages) {
         $matchedIds = [regex]::Matches($msg, $cuIdRegex)
         foreach ($match in $matchedIds) {
             $cuIds += $match.Groups[1].Value
+            write-host $match.Groups[1].Value
         }
     }
 
     return $cuIds | Select-Object -Unique
-
 }
 
 function Set-ClickUpFieldValue {
