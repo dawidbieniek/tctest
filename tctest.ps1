@@ -163,6 +163,7 @@ function Update-ClickUpTasks {
             $response = Invoke-RestMethod -Method Get -Uri $url -Headers $getTaskHeaders
             $releaseField = $response.custom_fields | Where-Object { $_.name -eq "Release" }
             $releaseValue = if ($releaseField -and $releaseField.value) { $releaseField.value } else { "" }
+            write-host $releaseValue
 
             # Project present with build number
             if ($releaseValue -match ($projectAlreadyHasBuidNrRegex -f $ProjectName)) {
@@ -191,11 +192,9 @@ function Update-ClickUpTasks {
         }
         catch [System.Net.WebException] {
             Write-WebError -Exception $_.Exception
-            return $false
         }
         catch {
             Write-Warning "[$TaskId] Unexpected error: $($_.Exception.Message)"
-            return $false
         }
     }
 }
