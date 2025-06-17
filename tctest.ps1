@@ -11,9 +11,6 @@ param(
     [Parameter][bool] $Testing
 )
 
-# For tests
-# throw "Random failure occurred."
-
 # Regex
 $cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
 $projectAlreadyIsPresentWithoutBuildNrRegex = "(?i)\b{0}\b" # 0 - displayName
@@ -23,7 +20,7 @@ $projectAlreadyHasBuidNrRegex = "(?i)\b{0}\b\s*(?:[:\-]\s*|\s+)[0-9][A-Za-z0-9\.
 $tcHeaders = @{
   "Authorization" = "Bearer $TcApiKey"
 }
-$tcGetBuildsUrl  = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:&fields=build(id,status)"
+$tcGetBuildsUrl  = "$TeamcityUrl/app/rest/builds?locator=buildType:$BuildTypeId,branch:$BranchName,state:finished,count:20&fields=build(id,status)"
 $tcGetChangesUrl = "$TeamcityUrl/app/rest/changes?locator=build:(id:{0})&fields=change(version)" # 0 - buildId
 
 # Clickup
@@ -221,4 +218,4 @@ if ($currentCuIds.Count -gt 0) {
     $currentCuIds | ForEach-Object { Write-Host "- $_" }
 }
 
-# Update-ClickUpTasks -TaskIds $cuIds -ProjectName $projectName -BuildNumber $BuildNumber
+Update-ClickUpTasks -TaskIds $cuIds -ProjectName $projectName -BuildNumber $BuildNumber
