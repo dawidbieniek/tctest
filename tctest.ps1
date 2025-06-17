@@ -95,6 +95,8 @@ function Get-PerviousBuildsRevs {
         write-host "$changes"
         write-host "changes"
         $changes
+        write-host "json"
+        $changes | ConvertTo-Json -Depth 10 | Write-Host
 
         foreach ($change in $changes.changes.change) {
             Write-Host $change.version
