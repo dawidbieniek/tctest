@@ -11,7 +11,7 @@ param(
 )
 
 # For tests
-# throw "Random failure occurred."
+throw "Random failure occurred."
 
 # Regex
 $cuIdRegex = '(?i)CU-([A-Za-z0-9]+)'
