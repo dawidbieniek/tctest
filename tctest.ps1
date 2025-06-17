@@ -7,7 +7,8 @@ param(
     [Parameter(Mandatory)][string] $BranchName,
     [Parameter(Mandatory)][string] $TeamcityUrl,
     [Parameter(Mandatory)][string] $TcApiKey,
-    [Parameter(Mandatory)][string] $BuildTypeId
+    [Parameter(Mandatory)][string] $BuildTypeId,
+    [Parameter][bool] $Testing
 )
 
 # For tests
@@ -91,16 +92,11 @@ function Get-PerviousBuildsRevs {
         Write-Host "Found failed build: $($build.id)"
 
         Write-Host "URL: $(($tcGetChangesUrl -f $build.id))"
-        $changes = Invoke-RestMethod -Method Get -Uri "$($tcGetChangesUrl -f $build.id)" -Headers $headers
-        write-host "$changes"
-        write-host "changes"
-        $changes
-        write-host "json"
-        $changes | ConvertTo-Json -Depth 10 | Write-Host
+        $changes = Invoke-RestMethod -Method Get -Uri "$($tcGetChangesUrl -f $build.id)" -Headers $tcHeaders
 
-        foreach ($change in $changes.changes.change) {
-            Write-Host $change.version
-            $faliedBuildRevs += $change.version
+        foreach ($change in $changes.changes.change.version) {
+            Write-Host $change
+            $faliedBuildRevs += $change
         }
     }
     return $faliedBuildRevs | Select-Object -Unique
@@ -190,6 +186,8 @@ function Update-ClickUpTasks {
             }
 
             Write-Host "[$taskId] changing Release field to '$releaseValue'"
+
+            if ($Testing -eq $true) { continue; }
 
             if (-not (Set-ClickUpFieldValue -TaskId $taskId -FieldId $releaseField.id -Value $releaseValue)) {
                 Write-Warning "[$taskId] Failed to set Release field."
