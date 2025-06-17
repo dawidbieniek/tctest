@@ -91,10 +91,12 @@ function Get-PerviousBuildsRevs {
 
         Write-Host "URL: $(($tcGetChangesUrl -f $build.id))"
         $changes = Invoke-RestMethod -Method Get -Uri ($tcGetChangesUrl -f $build.id) -Headers $headers
+        write-host "changes version"
+        $changes.changes.change.version
 
-        foreach ($change in $changes.changes.change.version) {
-            Write-Host $change
-            $faliedBuildRevs += $change
+        foreach ($change in $changes.changes.change) {
+            Write-Host $change.version
+            $faliedBuildRevs += $change.version
         }
     }
     return $faliedBuildRevs | Select-Object -Unique
