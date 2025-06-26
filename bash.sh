@@ -19,7 +19,7 @@ projectWordRegex="\\b%s\\b"
 projectWithBuildRegex="\\b%s\\b[[:space:]]*(?:[:\\-][[:space:]]*|[[:space:]]+)[0-9A-Za-z.\\-]*"
 
 # REST API URLs
-tcHeaders=(-H "Authorization: Bearer $TcApiKey")
+tcHeaders=(-H "Authorization: Bearer $TcApiKey" -H "Accept: application/json")
 tcGetBuildsUrl="${TeamcityUrl}/app/rest/builds?locator=buildType:${BuildTypeId},branch:${BranchName},state:finished,count:20&fields=build(id,status)"
 tcGetChangesUrl="${TeamcityUrl}/app/rest/changes?locator=build:(id:%s)&fields=change(version)"
 
@@ -47,20 +47,29 @@ get_mapped_project_name() {
 }
 
 get_previous_builds_revs() {
-  local builds json buildId status revs=()
+  local json buildId status revs=()
   json=$(curl -s "${tcHeaders[@]}" "$tcGetBuildsUrl")
 
-  echo "$json" | grep -Eo '"id":[0-9]+|"status":"[^"]+"' | paste - - |
-  while IFS=$'\t' read -r idLine statusLine; do
-    buildId=${idLine//[^0-9]/}
-    status=${statusLine//\"status\":\"/}
-    status=${status%\"}
-    if [[ $status == "SUCCESS" ]]; then break; fi
-    echo "Found failed build: $buildId" >&2
+  # parse each id/status pair, break on SUCCESS
+  echo "$json" \
+    | grep -Eo '"id":[0-9]+|"status":"[^"]+"' \
+    | paste - - \
+    | while IFS=$'\t' read -r idLine statusLine; do
+        buildId=${idLine//[^0-9]/}
+        status=${statusLine#*\"status\":\"}
+        status=${status%\"}
+        if [[ $status == "SUCCESS" ]]; then
+          break
+        fi
+        echo "Found failed build: $buildId" >&2
 
-    changesJson=$(curl -s "${tcHeaders[@]}" "$(printf "$tcGetChangesUrl" "$buildId")")
-    echo "$changesJson" | grep -oE '"version":"[^"]+"' | cut -d'"' -f4
-  done | sort -u
+        # pull all change versions
+        curl -s "${tcHeaders[@]}" "$(printf "$tcGetChangesUrl" "$buildId")" \
+          | grep -oE '"version":"[^"]+"' \
+          | cut -d'"' -f4
+      done \
+    | sort -u \
+    | grep -v '^[[:space:]]*$'   # drop any blank lines
 }
 
 get_current_build_revs() {
