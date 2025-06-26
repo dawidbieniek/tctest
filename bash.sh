@@ -19,10 +19,7 @@ BuildTypeId=$8
 
 releasePrefix="3.0."
 
-# Regex
 cuIdRegex='CU-([A-Za-z0-9]+)'
-projectWordRegex="\\b${projectName}\\b"
-projectWithBuildRegex="\\b${projectName}\\b[-[:space:]]*[0-9]+(\\.[0-9A-Za-z.-]*)?"
 
 # REST API URLs
 tcHeaders=(-H "Authorization: Bearer $TcApiKey" -H "Accept: application/json")
@@ -168,6 +165,9 @@ update_clickup_tasks() {
 
 # Main Execution
 projectName=$(get_mapped_project_name "$TcProjectName")
+
+projectWordRegex="\\b${projectName}\\b"
+projectWithBuildRegex="\\b${projectName}\\b[-[:space:]]*[0-9]+(\\.[0-9A-Za-z.-]*)?"
 
 read_nonempty_array previousRevs < <(get_previous_builds_revs)
 [[ "$DEBUG" == true ]] && (( ${#previousRevs[@]} )) && echo "# DEBUG: Previous builds revs:" >&2 && printf ' - %s\n' "${previousRevs[@]}" >&2
