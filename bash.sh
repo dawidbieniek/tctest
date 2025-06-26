@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # --------------------------------------
-# DEBUG SWITCH (set to true to enable)
+# DEBUG SWITCH (set to true to enable more logging)
 DEBUG=true
 # --------------------------------------
 
@@ -46,7 +46,6 @@ read_nonempty_array() {
   done
   eval "$__name=(\"\${arr[@]}\")"
 }
-
 
 get_mapped_project_name() {
   local name="$1"
@@ -149,7 +148,7 @@ update_clickup_tasks() {
 
     echo "[$taskId] changing Release field to: '$releaseValue'"
 
-    # --- Do not update during testing ---
+    # --- Do not update CU tasks during testing ---
     # curl -s -X POST "${postFieldHeaders[@]}" \
     #     -d "{\"value\":\"${releaseValue}\"}" \
     #     "$(printf "$postFieldUrl" "$taskId" "$fieldId")" >/dev/null && \
@@ -167,6 +166,7 @@ projectName=$(get_mapped_project_name "$TcProjectName")
 projectWordRegex="\\b${projectName}\\b"
 projectWithBuildRegex="\\b${projectName}\\b[-[:space:]]*[0-9]+(\\.[0-9A-Za-z.-]*)?"
 
+## Previous builds
 read_nonempty_array previousRevs < <(get_previous_builds_revs)
 [[ "$DEBUG" == true ]] && (( ${#previousRevs[@]} )) && echo "# DEBUG: Previous builds revs:" >&2 && printf ' - %s\n' "${previousRevs[@]}" >&2
 read_nonempty_array previousCuIds < <(get_task_ids_from_revs "${previousRevs[@]}")
@@ -177,6 +177,7 @@ if (( ${#previousCuIds[@]} )); then
   printf ' - %s\n' "${previousCuIds[@]}"
 fi
 
+## Current build
 read_nonempty_array currentRevs < <(get_current_build_revs)
 [[ "$DEBUG" == true ]] && (( ${#currentRevs[@]} )) && echo "# DEBUG: Current build revs:" >&2 && printf ' - %s\n' "${currentRevs[@]}" >&2
 read_nonempty_array currentCuIds < <(get_task_ids_from_revs "${currentRevs[@]}")
@@ -187,6 +188,7 @@ if (( ${#currentCuIds[@]} )); then
   printf ' - %s\n' "${currentCuIds[@]}"
 fi
 
+## Merge tasks from prev builds & current one
 read_nonempty_array allCuIds < <(printf '%s\n' "${previousCuIds[@]}" "${currentCuIds[@]}" | sort -u)
 
 if (( ${#allCuIds[@]} == 0 )); then
