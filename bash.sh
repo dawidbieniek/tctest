@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# TeamCity’s bash.sh wrapper passes itself (or your script path) as $1;
-# drop it so that $1–$8 line up with your intended params.
-#shift
-
 # --- Parameters (positional) ---
 # $1 = ChangesFilePath
 # $2 = BuildNumber
@@ -22,15 +18,6 @@ BranchName=$5
 TeamcityUrl=$6
 TcApiKey=$7
 BuildTypeId=$8
-
-echo $ChangesFilePath
-echo $BuildNumber
-echo $TcProjectName
-echo $CuApiKey
-echo $BranchName
-echo $TeamcityUrl
-echo $TcApiKey
-echo $BuildTypeId
 
 # --- Constants & Regex ---
 releasePrefix="3.0."
