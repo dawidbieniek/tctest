@@ -158,9 +158,9 @@ update_clickup_tasks() {
 # Main Execution
 projectName=$(get_mapped_project_name "$TcProjectName")
 
-mapfile -t previousRevs < <(get_previous_builds_revs)
+mapfile -t previousRevs < <(get_previous_builds_revs) | grep -v '^[[:space:]]*$')
 [[ "$DEBUG" == true ]] && echo "# DEBUG: Previous builds revs:" >&2 && printf ' - %s\n' "${previousRevs[@]}" >&2
-mapfile -t previousCuIds < <(get_task_ids_from_revs "${previousRevs[@]}")
+mapfile -t previousCuIds < <(get_task_ids_from_revs "${previousRevs[@]}") | grep -v '^[[:space:]]*$')
 [[ "$DEBUG" == true ]] && echo "# DEBUG: Previous builds tasks:" >&2 && printf ' - %s\n' "${previousCuIds[@]}" >&2
 
 if (( ${#previousCuIds[@]} )); then
@@ -168,9 +168,9 @@ if (( ${#previousCuIds[@]} )); then
   printf ' - %s\n' "${previousCuIds[@]}" >&2
 fi
 
-mapfile -t currentRevs < <(get_current_build_revs)
+mapfile -t currentRevs < <(get_current_build_revs) | grep -v '^[[:space:]]*$')
 [[ "$DEBUG" == true ]] && echo "# DEBUG: Current build revs:" >&2 && printf ' - %s\n' "${currentRevs[@]}" >&2
-mapfile -t currentCuIds < <(get_task_ids_from_revs "${currentRevs[@]}")
+mapfile -t currentCuIds < <(get_task_ids_from_revs "${currentRevs[@]}") | grep -v '^[[:space:]]*$')
 [[ "$DEBUG" == true ]] && echo "# DEBUG: Current build tasks:" >&2 && printf ' - %s\n' "${currentCuIds[@]}" >&2
 
 if (( ${#currentCuIds[@]} )); then
