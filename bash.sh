@@ -113,10 +113,8 @@ get_task_ids_from_revs() {
 
 update_clickup_tasks() {
   local projectName="$1"; shift
-  local re_word re_withnum projectReleaseValue releaseValue fieldId
+  local projectReleaseValue releaseValue fieldId
   projectReleaseValue="${projectName} - ${releasePrefix}${BuildNumber}"
-  re_word=$(printf "$projectWordRegex" "$projectName")
-  re_withnum=$(printf "$projectWithBuildRegex" "$projectName")
 
   for taskId in "$@"; do
     url="$(printf "$getTaskUrl" "$taskId")"
@@ -125,17 +123,11 @@ update_clickup_tasks() {
     [[ "$DEBUG" == true ]] && echo "# DEBUG: Received: $resp" >&2
 
     # Extract fieldId and current value manually without jq
-    fieldId=$(echo "$resp" \
-      | grep -A2 '"name":"Release"' || true \
-      | grep '"id":' \
-      | head -n1 \
-      | sed -E 's/.*"id":"([^"]+)".*/\1/')
+	fieldId=$(echo "$resp" \
+	  | grep -oP '"name":"Release".*?"id":"\K[^"]+' || true)
 
-    releaseValue=$(echo "$resp" \
-      | grep -A2 '"name":"Release"' || true \
-      | grep '"value":' \
-      | head -n1 \
-      | sed -E 's/.*"value":"([^"]*)".*/\1/' || true)
+	releaseValue=$(echo "$resp" \
+	  | grep -oP '"name":"Release".*?"value":"\K[^"]*' || true)
 	  
 	# Project present with build number
     if [[ "$releaseValue" =~ $projectWithBuildRegex ]]; then
