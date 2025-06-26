@@ -6,8 +6,6 @@ set -euo pipefail
 DEBUG=true
 # --------------------------------------
 
-exit 42
-
 # Parameters
 ChangesFilePath=$1
 BuildNumber=$2
