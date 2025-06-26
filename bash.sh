@@ -41,19 +41,16 @@ declare -A projectNameMap=(
   ["Build Wallapi Docker"]="Wall"
 )
 
-# Helper for making sure mapfile won't return arrays with items for empty input
-safe_mapfile() {
-  local _arr_name=$1
+read_nonempty_array() {
+  local __name=$1
   shift
-  local _out
-  _out=$("$@" 2>/dev/null) || true
-
-  if [[ -z "$_out" ]]; then
-    eval "$_arr_name=()"
-  else
-    safe_mapfile "$_arr_name" < <(printf '%s\n' "$_out")
-  fi
+  local line arr=()
+  while IFS= read -r line; do
+    [[ -n "${line//[[:space:]]/}" ]] && arr+=("$line")
+  done
+  eval "$__name=(\"\${arr[@]}\")"
 }
+
 
 get_mapped_project_name() {
   local name="$1"
@@ -172,9 +169,9 @@ update_clickup_tasks() {
 # Main Execution
 projectName=$(get_mapped_project_name "$TcProjectName")
 
-safe_mapfile previousRevs < <(get_previous_builds_revs)
+read_nonempty_array previousRevs < <(get_previous_builds_revs)
 [[ "$DEBUG" == true ]] && (( ${#previousRevs[@]} )) && echo "# DEBUG: Previous builds revs:" >&2 && printf ' - %s\n' "${previousRevs[@]}" >&2
-safe_mapfile previousCuIds < <(get_task_ids_from_revs "${previousRevs[@]}")
+read_nonempty_array previousCuIds < <(get_task_ids_from_revs "${previousRevs[@]}")
 [[ "$DEBUG" == true ]] && (( ${#previousCuIds[@]} )) && echo "# DEBUG: Previous builds tasks:" >&2 && printf ' - %s\n' "${previousCuIds[@]}" >&2
 
 if (( ${#previousCuIds[@]} )); then
@@ -182,9 +179,9 @@ if (( ${#previousCuIds[@]} )); then
   printf ' - %s\n' "${previousCuIds[@]}" >&2
 fi
 
-safe_mapfile currentRevs < <(get_current_build_revs)
+read_nonempty_array currentRevs < <(get_current_build_revs)
 [[ "$DEBUG" == true ]] && (( ${#currentRevs[@]} )) && echo "# DEBUG: Current build revs:" >&2 && printf ' - %s\n' "${currentRevs[@]}" >&2
-safe_mapfile currentCuIds < <(get_task_ids_from_revs "${currentRevs[@]}")
+read_nonempty_array currentCuIds < <(get_task_ids_from_revs "${currentRevs[@]}")
 [[ "$DEBUG" == true ]] && (( ${#currentCuIds[@]} )) && echo "# DEBUG: Current build tasks:" >&2 && printf ' - %s\n' "${currentCuIds[@]}" >&2
 
 if (( ${#currentCuIds[@]} )); then
@@ -192,7 +189,7 @@ if (( ${#currentCuIds[@]} )); then
   printf ' - %s\n' "${currentCuIds[@]}"
 fi
 
-safe_mapfile allCuIds < <(printf '%s\n' "${previousCuIds[@]}" "${currentCuIds[@]}" | sort -u)
+read_nonempty_array allCuIds < <(printf '%s\n' "${previousCuIds[@]}" "${currentCuIds[@]}" | sort -u)
 
 if (( ${#allCuIds[@]} == 0 )); then
   echo "No CU tasks found. Exiting." >&2
