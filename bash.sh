@@ -5,7 +5,7 @@ set -euo pipefail
 # DEBUG SWITCH (set to true to enable)
 DEBUG=true
 # --------------------------------------
-
+exit 13412
 # Parameters
 ChangesFilePath=$1
 BuildNumber=$2
