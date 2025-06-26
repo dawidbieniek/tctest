@@ -88,7 +88,7 @@ get_previous_builds_revs() {
   	    local changesJson=$(curl -s "${tcHeaders[@]}" "$url")
   	    [[ "$DEBUG" == true ]] && echo "# DEBUG: Received: $changesJson" >&2
         
-		ho "$changesJson" \
+		echo "$changesJson" \
           | grep -oP '"version":"\K[^"]+' \
           || true
       done \
