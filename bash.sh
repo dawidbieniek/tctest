@@ -117,6 +117,8 @@ update_clickup_tasks() {
   local projectReleaseValue releaseValue fieldId
   projectReleaseValue="${projectName} - ${releasePrefix}${BuildNumber}"
 
+  # Turnoff regex case match. Its safe as long as this script is run in subshell
+  shopt -s nocasematch
   for taskId in "$@"; do
     url="$(printf "$getTaskUrl" "$taskId")"
     [[ "$DEBUG" == true ]] && echo "# DEBUG: Sent GET $url" >&2
@@ -155,6 +157,8 @@ update_clickup_tasks() {
     #     echo "[$taskId] Warning: Failed to update Release field" >&2
     # -------------------------------------
   done
+  # Turn regex case match back on
+  shopt -u nocasematch
 }
 
 # Main Execution
