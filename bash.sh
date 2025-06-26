@@ -23,6 +23,15 @@ TeamcityUrl=$6
 TcApiKey=$7
 BuildTypeId=$8
 
+echo $ChangesFilePath
+echo $BuildNumber
+echo $TcProjectName
+echo $CuApiKey
+echo $BranchName
+echo $TeamcityUrl
+echo $TcApiKey
+echo $BuildTypeId
+
 # --- Constants & Regex ---
 releasePrefix="3.0."
 cuIdRegex='(?i)CU-([A-Za-z0-9]+)'
