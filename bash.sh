@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# --------------------------------------
+# DEBUG SWITCH (set to true to enable)
+DEBUG=true
+# --------------------------------------
+
+
 # Parameters
 ChangesFilePath=$1
 BuildNumber=$2
@@ -49,6 +55,9 @@ get_mapped_project_name() {
 get_previous_builds_revs() {
   local json buildId status revs=()
   json=$(curl -s "${tcHeaders[@]}" "$tcGetBuildsUrl")
+  
+  [[ "$DEBUG" == true ]] && echo "# DEBUG: Sent GET $tcGetBuildsUrl" >&2
+  [[ "$DEBUG" == true ]] && echo "# DEBUG: Received: $json" >&2
 
   # parse each id/status pair, break on SUCCESS
   echo "$json" \
@@ -64,9 +73,18 @@ get_previous_builds_revs() {
         echo "Found failed build: $buildId" >&2
 
         # pull all change versions
-        curl -s "${tcHeaders[@]}" "$(printf "$tcGetChangesUrl" "$buildId")" \
-          | grep -oE '"version":"[^"]+"' \
-          | cut -d'"' -f4
+        # curl -s "${tcHeaders[@]}" "$(printf "$tcGetChangesUrl" "$buildId")" \
+          # | grep -oE '"version":"[^"]+"' \
+          # | cut -d'"' -f4
+		  
+		  
+        # DEBUG: log change fetch
+        url="$(printf "$tcGetChangesUrl" "$buildId")"
+        [[ "$DEBUG" == true ]] && echo "# DEBUG: Sent GET $url" >&2
+        changesJson=$(curl -s "${tcHeaders[@]}" "$url")
+        [[ "$DEBUG" == true ]] && echo "# DEBUG: Received: $changesJson" >&2
+		
+		
       done \
     | sort -u \
     | grep -v '^[[:space:]]*$'   # drop any blank lines
@@ -98,7 +116,13 @@ update_clickup_tasks() {
 
   for taskId in "$@"; do
     echo "Processing task $taskId..." >&2
-    resp=$(curl -s "${getTaskHeaders[@]}" "$(printf "$getTaskUrl" "$taskId")")
+    # resp=$(curl -s "${getTaskHeaders[@]}" "$(printf "$getTaskUrl" "$taskId")")
+	
+	
+    url="$(printf "$getTaskUrl" "$taskId")"
+    [[ "$DEBUG" == true ]] && echo "# DEBUG: Sent GET $url" >&2
+    resp=$(curl -s "${getTaskHeaders[@]}" "$url")
+    [[ "$DEBUG" == true ]] && echo "# DEBUG: Received: $resp" >&2
 
     # Extract fieldId and current value manually without jq
     fieldId=$(echo "$resp" | grep -A10 '"name":"Release"' | grep '"id":' | head -n1 | sed -E 's/.*"id":"([^"]+)".*/\1/')
