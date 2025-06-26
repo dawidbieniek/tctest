@@ -3,7 +3,7 @@ set -euo pipefail
 
 # TeamCity’s bash.sh wrapper passes itself (or your script path) as $1;
 # drop it so that $1–$8 line up with your intended params.
-shift
+#shift
 
 # --- Parameters (positional) ---
 # $1 = ChangesFilePath
