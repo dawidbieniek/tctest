@@ -159,7 +159,9 @@ update_clickup_tasks() {
 projectName=$(get_mapped_project_name "$TcProjectName")
 
 mapfile -t previousRevs < <(get_previous_builds_revs)
+[[ "$DEBUG" == true ]] && echo "# DEBUG: Previous builds revs:" >&2 && rintf ' - %s\n' "${previousRevs[@]}" >&2
 mapfile -t previousCuIds < <(get_task_ids_from_revs "${previousRevs[@]}")
+[[ "$DEBUG" == true ]] && echo "# DEBUG: Previous builds tasks:" >&2 && rintf ' - %s\n' "${previousCuIds[@]}" >&2
 
 if (( ${#previousCuIds[@]} )); then
   echo "Warning: ${#previousCuIds[@]} tasks from failed builds" >&2
@@ -167,7 +169,9 @@ if (( ${#previousCuIds[@]} )); then
 fi
 
 mapfile -t currentRevs < <(get_current_build_revs)
+[[ "$DEBUG" == true ]] && echo "# DEBUG: Current build revs:" >&2 && rintf ' - %s\n' "${currentRevs[@]}" >&2
 mapfile -t currentCuIds < <(get_task_ids_from_revs "${currentRevs[@]}")
+[[ "$DEBUG" == true ]] && echo "# DEBUG: Current build tasks:" >&2 && rintf ' - %s\n' "${currentCuIds[@]}" >&2
 
 if (( ${#currentCuIds[@]} )); then
   echo "Found ${#currentCuIds[@]} CU tasks:"
