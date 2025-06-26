@@ -125,7 +125,8 @@ update_clickup_tasks() {
     # Extract fieldId and current value manually without jq
 	fieldId=$(echo "$resp" \
 	  | grep -oP '"name":"Release".*?"id":"\K[^"]+' || true)
-
+    [[ "$DEBUG" == true ]] && echo "# DEBUG: Release field id: $fieldId" >&2
+	
 	releaseValue=$(echo "$resp" \
 	  | grep -oP '"name":"Release".*?"value":"\K[^"]*' || true)
 	  
