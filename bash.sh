@@ -71,26 +71,28 @@ get_previous_builds_revs() {
     | grep -Eo '"id":[0-9]+|"number":"[^"]+"|"status":"[^"]+"' \
     | paste - - - \
     | while IFS=$'\t' read -r idLine numberLine statusLine; do
-  	  buildId=${idLine//[^0-9]/}
-  	  buildNumber=${numberLine#*\"number\":\"}
-  	  buildNumber=${buildNumber%\"}
-  	  status=${statusLine#*\"status\":\"}
-  	  status=${status%\"}
-  
-  	  if [[ $status == "SUCCESS" ]]; then
-  		break
-  	  fi
-  	  echo "Found failed build: $buildNumber" >&2
-  
-  	  # pull all change versions
-  	  url="$(printf "$tcGetChangesUrl" "$buildId")"
-  	  [[ "$DEBUG" == true ]] && echo "# DEBUG: Sent GET $url" >&2
-  	  changesJson=$(curl -s "${tcHeaders[@]}" "$url")
-  	  [[ "$DEBUG" == true ]] && echo "# DEBUG: Received: $changesJson" >&2
-  
-  	done \
-    | sort -u \
-    | grep -v '^[[:space:]]*$'   # drop any blank lines
+  	    buildId=${idLine//[^0-9]/}
+  	    buildNumber=${numberLine#*\"number\":\"}
+  	    buildNumber=${buildNumber%\"}
+  	    status=${statusLine#*\"status\":\"}
+  	    status=${status%\"}
+	    
+  	    if [[ $status == "SUCCESS" ]]; then
+  		  break
+  	    fi
+  	    echo "Found failed build: $buildNumber" >&2
+	    
+  	    # pull all change versions
+  	    url="$(printf "$tcGetChangesUrl" "$buildId")"
+  	    [[ "$DEBUG" == true ]] && echo "# DEBUG: Sent GET $url" >&2
+  	    local changesJson=$(curl -s "${tcHeaders[@]}" "$url")
+  	    [[ "$DEBUG" == true ]] && echo "# DEBUG: Received: $changesJson" >&2
+        
+		ho "$changesJson" \
+          | grep -oP '"version":"\K[^"]+' \
+          || true
+      done \
+        | sort -u
 }
 
 get_current_build_revs() {
