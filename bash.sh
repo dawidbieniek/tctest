@@ -173,19 +173,19 @@ update_clickup_tasks() {
 projectName=$(get_mapped_project_name "$TcProjectName")
 
 safe_mapfile previousRevs < <(get_previous_builds_revs)
-[[ "$DEBUG" == true ]] && echo "# DEBUG: Previous builds revs:" >&2 && printf ' - %s\n' "${previousRevs[@]}" >&2
+[[ "$DEBUG" == true ]] && (( ${#previousRevs[@]} )) && echo "# DEBUG: Previous builds revs:" >&2 && printf ' - %s\n' "${previousRevs[@]}" >&2
 safe_mapfile previousCuIds < <(get_task_ids_from_revs "${previousRevs[@]}")
-[[ "$DEBUG" == true ]] && echo "# DEBUG: Previous builds tasks:" >&2 && printf ' - %s\n' "${previousCuIds[@]}" >&2
+[[ "$DEBUG" == true ]] && (( ${#previousCuIds[@]} )) && echo "# DEBUG: Previous builds tasks:" >&2 && printf ' - %s\n' "${previousCuIds[@]}" >&2
 
 if (( ${#previousCuIds[@]} )); then
-  echo "Warning: ${#previousCuIds[@]} tasks from failed builds" >&2
+  echo "Found ${#previousCuIds[@]} tasks from failed builds" >&2
   printf ' - %s\n' "${previousCuIds[@]}" >&2
 fi
 
 safe_mapfile currentRevs < <(get_current_build_revs)
-[[ "$DEBUG" == true ]] && echo "# DEBUG: Current build revs:" >&2 && printf ' - %s\n' "${currentRevs[@]}" >&2
+[[ "$DEBUG" == true ]] && (( ${#currentRevs[@]} )) && echo "# DEBUG: Current build revs:" >&2 && printf ' - %s\n' "${currentRevs[@]}" >&2
 safe_mapfile currentCuIds < <(get_task_ids_from_revs "${currentRevs[@]}")
-[[ "$DEBUG" == true ]] && echo "# DEBUG: Current build tasks:" >&2 && printf ' - %s\n' "${currentCuIds[@]}" >&2
+[[ "$DEBUG" == true ]] && (( ${#currentCuIds[@]} )) && echo "# DEBUG: Current build tasks:" >&2 && printf ' - %s\n' "${currentCuIds[@]}" >&2
 
 if (( ${#currentCuIds[@]} )); then
   echo "Found ${#currentCuIds[@]} CU tasks:"
