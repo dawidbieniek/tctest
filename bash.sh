@@ -1,15 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# --- Parameters (positional) ---
-# $1 = ChangesFilePath
-# $2 = BuildNumber
-# $3 = TcProjectName
-# $4 = CuApiKey
-# $5 = BranchName
-# $6 = TeamcityUrl
-# $7 = TcApiKey
-# $8 = BuildTypeId
+# Parameters
 ChangesFilePath=$1
 BuildNumber=$2
 TcProjectName=$3
@@ -19,24 +11,24 @@ TeamcityUrl=$6
 TcApiKey=$7
 BuildTypeId=$8
 
-# --- Constants & Regex ---
 releasePrefix="3.0."
-cuIdRegex='(?i)CU-([A-Za-z0-9]+)'
-projectWordRegex="\\b%s\\b"
-projectWithBuildRegex="\\b%s\\b\\s*(?:[:\\-]\\s*|\\s+)[0-9][A-Za-z0-9.\\-]*"
 
-# --- TeamCity REST endpoints ---
-tcHeaders=(-H "Authorization: Bearer ${TcApiKey}")
+# Regex
+cuIdRegex='CU-([A-Za-z0-9]+)'
+projectWordRegex="\\b%s\\b"
+projectWithBuildRegex="\\b%s\\b[[:space:]]*(?:[:\\-][[:space:]]*|[[:space:]]+)[0-9A-Za-z.\\-]*"
+
+# REST API URLs
+tcHeaders=(-H "Authorization: Bearer $TcApiKey")
 tcGetBuildsUrl="${TeamcityUrl}/app/rest/builds?locator=buildType:${BuildTypeId},branch:${BranchName},state:finished,count:20&fields=build(id,status)"
 tcGetChangesUrl="${TeamcityUrl}/app/rest/changes?locator=build:(id:%s)&fields=change(version)"
 
-# --- ClickUp REST endpoints ---
-getTaskHeaders=(-H "Authorization: ${CuApiKey}" -H "Accept: application/json")
-postFieldHeaders=(-H "Authorization: ${CuApiKey}" -H "Accept: application/json" -H "Content-Type: application/json")
+getTaskHeaders=(-H "Authorization: $CuApiKey" -H "Accept: application/json")
+postFieldHeaders=(-H "Authorization: $CuApiKey" -H "Accept: application/json" -H "Content-Type: application/json")
 getTaskUrl="https://api.clickup.com/api/v2/task/%s"
 postFieldUrl="https://api.clickup.com/api/v2/task/%s/field/%s"
 
-# --- Project name map & lookup ---
+# Project mapping
 declare -A projectNameMap=(
   ["Emplo"]="TMS"
   ["Admin2"]="Admin"
@@ -49,28 +41,26 @@ get_mapped_project_name() {
     echo "Using '${projectNameMap[$name]}' as project name" >&2
     echo "${projectNameMap[$name]}"
   else
-    echo "Warning: Couldn't find '${name}' in project name map" >&2
+    echo "Warning: No mapping for project '$name'" >&2
     echo "$name"
   fi
 }
 
 get_previous_builds_revs() {
-  local lines buildId status revs=() newrev
-  mapfile -t lines < <(curl -s "${tcHeaders[@]}" "$tcGetBuildsUrl" \
-    | jq -r '.build[] | "\(.id)\t\(.status)"')
-  for line in "${lines[@]}"; do
-    buildId=${line%%$'\t'*}
-    status=${line##*$'\t'}
-    if [[ "$status" == "SUCCESS" ]]; then
-      break
-    fi
+  local builds json buildId status revs=()
+  json=$(curl -s "${tcHeaders[@]}" "$tcGetBuildsUrl")
+
+  echo "$json" | grep -Eo '"id":[0-9]+|"status":"[^"]+"' | paste - - |
+  while IFS=$'\t' read -r idLine statusLine; do
+    buildId=${idLine//[^0-9]/}
+    status=${statusLine//\"status\":\"/}
+    status=${status%\"}
+    if [[ $status == "SUCCESS" ]]; then break; fi
     echo "Found failed build: $buildId" >&2
-    mapfile -t newrev < <(curl -s "${tcHeaders[@]}" \
-      "$(printf "$tcGetChangesUrl" "$buildId")" \
-      | jq -r '.changes.change[].version')
-    revs+=("${newrev[@]}")
-  done
-  printf '%s\n' "${revs[@]}" | sort -u
+
+    changesJson=$(curl -s "${tcHeaders[@]}" "$(printf "$tcGetChangesUrl" "$buildId")")
+    echo "$changesJson" | grep -oE '"version":"[^"]+"' | cut -d'"' -f4
+  done | sort -u
 }
 
 get_current_build_revs() {
@@ -78,14 +68,13 @@ get_current_build_revs() {
 }
 
 get_task_ids_from_revs() {
-  local rev msg cuIds=() match
+  local rev cuIds=() msg match
   for rev in "$@"; do
     [[ -z "$rev" ]] && continue
-    msg=$(git log -1 --format="%s" "$rev")
-    while [[ $msg =~ $cuIdRegex ]]; do
-      match=${BASH_REMATCH[1]}
-      cuIds+=("$match")
-      msg=${msg#*${BASH_REMATCH[0]}}
+    msg=$(git log -1 --format="%s" "$rev" 2>/dev/null || true)
+    while [[ "$msg" =~ $cuIdRegex ]]; do
+      cuIds+=("${BASH_REMATCH[1]}")
+      msg=${msg#*"${BASH_REMATCH[0]}"}
     done
   done
   printf '%s\n' "${cuIds[@]}" | sort -u
@@ -93,72 +82,68 @@ get_task_ids_from_revs() {
 
 update_clickup_tasks() {
   local projectName="$1"; shift
-  local re_word re_withnum projectReleaseValue
+  local re_word re_withnum projectReleaseValue releaseValue fieldId
+  projectReleaseValue="${projectName} - ${releasePrefix}${BuildNumber}"
   re_word=$(printf "$projectWordRegex" "$projectName")
   re_withnum=$(printf "$projectWithBuildRegex" "$projectName")
-  projectReleaseValue="${projectName} - ${releasePrefix}${BuildNumber}"
 
   for taskId in "$@"; do
-    echo "Processing task $taskId..."  # stdout
-    local resp fieldId releaseValue
+    echo "Processing task $taskId..." >&2
+    resp=$(curl -s "${getTaskHeaders[@]}" "$(printf "$getTaskUrl" "$taskId")")
 
-    resp=$(curl -s "${getTaskHeaders[@]}" \
-      "$(printf "$getTaskUrl" "$taskId")")
-
-    fieldId=$(jq -r --arg name "Release" '.custom_fields[]
-      | select(.name==$name).id' <<<"$resp")
-    releaseValue=$(jq -r --arg name "Release" '.custom_fields[]
-      | select(.name==$name).value // ""' <<<"$resp")
+    # Extract fieldId and current value manually without jq
+    fieldId=$(echo "$resp" | grep -A10 '"name":"Release"' | grep '"id":' | head -n1 | sed -E 's/.*"id":"([^"]+)".*/\1/')
+    releaseValue=$(echo "$resp" | grep -A10 '"name":"Release"' | grep '"value":' | head -n1 | sed -E 's/.*"value":"?([^"]*)"?[,]?/\1/')
 
     if [[ "$releaseValue" =~ $re_withnum ]]; then
-      releaseValue=$(echo "$releaseValue" | sed -E \
-        "s/$re_withnum/$projectReleaseValue/I")
-      echo "[$taskId] Replaced existing project+build."
+      releaseValue=$(echo "$releaseValue" | sed -E "s/$re_withnum/$projectReleaseValue/I")
+      echo "[$taskId] Updated existing project+build."
     elif [[ "$releaseValue" =~ $re_word ]]; then
-      releaseValue=$(echo "$releaseValue" | sed -E \
-        "s/$re_word/$projectReleaseValue/I")
+      releaseValue=$(echo "$releaseValue" | sed -E "s/$re_word/$projectReleaseValue/I")
       echo "[$taskId] Added build number to existing project."
-    elif [[ -z "${releaseValue// /}" ]]; then
+    elif [[ -z "$releaseValue" ]]; then
       releaseValue="$projectReleaseValue"
-      echo "[$taskId] Setting new Release value."
+      echo "[$taskId] Set new Release field."
     else
-      releaseValue="${projectReleaseValue}, ${releaseValue}"
-      echo "[$taskId] Prepending to existing text."
+      releaseValue="${projectReleaseValue}, $releaseValue"
+      echo "[$taskId] Prepended new release value."
     fi
 
-    if curl -s -X POST "${postFieldHeaders[@]}" \
-        -d "{\"value\":\"${releaseValue}\"}" \
-        "$(printf "$postFieldUrl" "$taskId" "$fieldId")" >/dev/null; then
-      echo "[$taskId] Successfully updated Release to '$releaseValue'."
-    else
-      echo "[$taskId] Warning: Failed to update Release field." >&2
-    fi
+    echo "[$taskId] Final Release value: '$releaseValue'" >&2
+
+    # --- Do not update during testing ---
+    # curl -s -X POST "${postFieldHeaders[@]}" \
+    #     -d "{\"value\":\"${releaseValue}\"}" \
+    #     "$(printf "$postFieldUrl" "$taskId" "$fieldId")" >/dev/null && \
+    #     echo "[$taskId] Successfully updated Release to '$releaseValue'" || \
+    #     echo "[$taskId] Warning: Failed to update Release field" >&2
+    # -------------------------------------
   done
 }
 
-# --- Main ---
+# Main Execution
 projectName=$(get_mapped_project_name "$TcProjectName")
 
 mapfile -t previousRevs < <(get_previous_builds_revs)
-previousCuIds=($(get_task_ids_from_revs "${previousRevs[@]}"))
+mapfile -t previousCuIds < <(get_task_ids_from_revs "${previousRevs[@]}")
 
 if (( ${#previousCuIds[@]} )); then
-  echo "Warning: Found ${#previousCuIds[@]} tasks in previous failed builds." >&2
-  printf 'Previous builds tasks:\n' >&2
+  echo "Warning: ${#previousCuIds[@]} tasks from failed builds" >&2
   printf ' - %s\n' "${previousCuIds[@]}" >&2
 fi
 
 mapfile -t currentRevs < <(get_current_build_revs)
-currentCuIds=($(get_task_ids_from_revs "${currentRevs[@]}"))
+mapfile -t currentCuIds < <(get_task_ids_from_revs "${currentRevs[@]}")
 
 if (( ${#currentCuIds[@]} )); then
-  echo "Found new ${#currentCuIds[@]} CU tasks:"
+  echo "Found ${#currentCuIds[@]} CU tasks:"
   printf ' - %s\n' "${currentCuIds[@]}"
 fi
 
-allCuIds=($(printf '%s\n' "${previousCuIds[@]}" "${currentCuIds[@]}" | sort -u))
+mapfile -t allCuIds < <(printf '%s\n' "${previousCuIds[@]}" "${currentCuIds[@]}" | sort -u)
+
 if (( ${#allCuIds[@]} == 0 )); then
-  echo "Warning: No CU tasks found; nothing to update." >&2
+  echo "No CU tasks found. Exiting." >&2
   exit 0
 fi
 
