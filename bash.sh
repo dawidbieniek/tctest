@@ -21,8 +21,8 @@ releasePrefix="3.0."
 
 # Regex
 cuIdRegex='CU-([A-Za-z0-9]+)'
-projectWordRegex="\\b%s\\b"
-projectWithBuildRegex="\\b%s\\b[[:space:]]*(?:[:\\-][[:space:]]*|[[:space:]]+)[0-9A-Za-z.\\-]*"
+projectWordRegex="\\b${projectName}\\b"
+projectWithBuildRegex="\\b${projectName}\\b[-[:space:]]*[0-9]+(\\.[0-9A-Za-z.-]*)?"
 
 # REST API URLs
 tcHeaders=(-H "Authorization: Bearer $TcApiKey" -H "Accept: application/json")
@@ -86,11 +86,6 @@ get_previous_builds_revs() {
   	  fi
   	  echo "Found failed build: $buildNumber" >&2
   
-  	# pull all change versions
-  	# curl -s "${tcHeaders[@]}" "$(printf "$tcGetChangesUrl" "$buildId")" \
-  	  # | grep -oE '"version":"[^"]+"' \
-  	  # | cut -d'"' -f4
-  
   	  # pull all change versions
   	  url="$(printf "$tcGetChangesUrl" "$buildId")"
   	  [[ "$DEBUG" == true ]] && echo "# DEBUG: Sent GET $url" >&2
@@ -127,34 +122,39 @@ update_clickup_tasks() {
   re_withnum=$(printf "$projectWithBuildRegex" "$projectName")
 
   for taskId in "$@"; do
-    echo "Processing task $taskId..." >&2
-    # resp=$(curl -s "${getTaskHeaders[@]}" "$(printf "$getTaskUrl" "$taskId")")
-	
-	
     url="$(printf "$getTaskUrl" "$taskId")"
     [[ "$DEBUG" == true ]] && echo "# DEBUG: Sent GET $url" >&2
     resp=$(curl -s "${getTaskHeaders[@]}" "$url")
     [[ "$DEBUG" == true ]] && echo "# DEBUG: Received: $resp" >&2
 
     # Extract fieldId and current value manually without jq
-    fieldId=$(echo "$resp" | grep -A10 '"name":"Release"' | grep '"id":' | head -n1 | sed -E 's/.*"id":"([^"]+)".*/\1/')
-    releaseValue=$(echo "$resp" | grep -A10 '"name":"Release"' | grep '"value":' | head -n1 | sed -E 's/.*"value":"?([^"]*)"?[,]?/\1/')
+    fieldId=$(echo "$resp" \
+      | grep -A2 '"name":"Release"' || true \
+      | grep '"id":' \
+      | head -n1 \
+      | sed -E 's/.*"id":"([^"]+)".*/\1/')
 
-    if [[ "$releaseValue" =~ $re_withnum ]]; then
-      releaseValue=$(echo "$releaseValue" | sed -E "s/$re_withnum/$projectReleaseValue/I")
-      echo "[$taskId] Updated existing project+build."
-    elif [[ "$releaseValue" =~ $re_word ]]; then
-      releaseValue=$(echo "$releaseValue" | sed -E "s/$re_word/$projectReleaseValue/I")
-      echo "[$taskId] Added build number to existing project."
+    releaseValue=$(echo "$resp" \
+      | grep -A2 '"name":"Release"' || true \
+      | grep '"value":' \
+      | head -n1 \
+      | sed -E 's/.*"value":"([^"]*)".*/\1/' || true)
+	  
+	# Project present with build number
+    if [[ "$releaseValue" =~ $projectWithBuildRegex ]]; then
+      releaseValue=$(echo "$releaseValue" | sed -E "s/$projectWithBuildRegex/$projectReleaseValue/I")
+	# Project present without build number
+    elif [[ "$releaseValue" =~ $projectWordRegex ]]; then
+      releaseValue=$(echo "$releaseValue" | sed -E "s/$projectWordRegex/$projectReleaseValue/I")
+	# Field is empty
     elif [[ -z "$releaseValue" ]]; then
       releaseValue="$projectReleaseValue"
-      echo "[$taskId] Set new Release field."
+	# Field contains text
     else
       releaseValue="${projectReleaseValue}, $releaseValue"
-      echo "[$taskId] Prepended new release value."
     fi
 
-    echo "[$taskId] Final Release value: '$releaseValue'" >&2
+    echo "[$taskId] changing Release field to: '$releaseValue'"
 
     # --- Do not update during testing ---
     # curl -s -X POST "${postFieldHeaders[@]}" \
@@ -175,8 +175,8 @@ read_nonempty_array previousCuIds < <(get_task_ids_from_revs "${previousRevs[@]}
 [[ "$DEBUG" == true ]] && (( ${#previousCuIds[@]} )) && echo "# DEBUG: Previous builds tasks:" >&2 && printf ' - %s\n' "${previousCuIds[@]}" >&2
 
 if (( ${#previousCuIds[@]} )); then
-  echo "Found ${#previousCuIds[@]} tasks from failed builds" >&2
-  printf ' - %s\n' "${previousCuIds[@]}" >&2
+  echo "Found ${#previousCuIds[@]} tasks from failed builds"
+  printf ' - %s\n' "${previousCuIds[@]}"
 fi
 
 read_nonempty_array currentRevs < <(get_current_build_revs)
@@ -192,7 +192,7 @@ fi
 read_nonempty_array allCuIds < <(printf '%s\n' "${previousCuIds[@]}" "${currentCuIds[@]}" | sort -u)
 
 if (( ${#allCuIds[@]} == 0 )); then
-  echo "No CU tasks found. Exiting." >&2
+  echo "No CU tasks found. Exiting."
   exit 0
 fi
 
