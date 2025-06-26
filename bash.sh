@@ -26,7 +26,7 @@ projectWithBuildRegex="\\b%s\\b[[:space:]]*(?:[:\\-][[:space:]]*|[[:space:]]+)[0
 
 # REST API URLs
 tcHeaders=(-H "Authorization: Bearer $TcApiKey" -H "Accept: application/json")
-tcGetBuildsUrl="${TeamcityUrl}/app/rest/builds?locator=buildType:${BuildTypeId},branch:${BranchName},state:finished,count:20&fields=build(id,status)"
+tcGetBuildsUrl="${TeamcityUrl}/app/rest/builds?locator=buildType:${BuildTypeId},branch:${BranchName},state:finished,count:20&fields=build(id,number,status)"
 tcGetChangesUrl="${TeamcityUrl}/app/rest/changes?locator=build:(id:%s)&fields=change(version)"
 
 getTaskHeaders=(-H "Authorization: $CuApiKey" -H "Accept: application/json")
@@ -59,33 +59,34 @@ get_previous_builds_revs() {
   [[ "$DEBUG" == true ]] && echo "# DEBUG: Sent GET $tcGetBuildsUrl" >&2
   [[ "$DEBUG" == true ]] && echo "# DEBUG: Received: $json" >&2
 
-  # parse each id/status pair, break on SUCCESS
+  # parse each id/number/status triplet, break on SUCCESS
   echo "$json" \
-    | grep -Eo '"id":[0-9]+|"status":"[^"]+"' \
-    | paste - - \
-    | while IFS=$'\t' read -r idLine statusLine; do
-        buildId=${idLine//[^0-9]/}
-        status=${statusLine#*\"status\":\"}
-        status=${status%\"}
-        if [[ $status == "SUCCESS" ]]; then
-          break
-        fi
-        echo "Found failed build: $buildId" >&2
-
-        # pull all change versions
-        # curl -s "${tcHeaders[@]}" "$(printf "$tcGetChangesUrl" "$buildId")" \
-          # | grep -oE '"version":"[^"]+"' \
-          # | cut -d'"' -f4
-		  
-		  
-        # DEBUG: log change fetch
-        url="$(printf "$tcGetChangesUrl" "$buildId")"
-        [[ "$DEBUG" == true ]] && echo "# DEBUG: Sent GET $url" >&2
-        changesJson=$(curl -s "${tcHeaders[@]}" "$url")
-        [[ "$DEBUG" == true ]] && echo "# DEBUG: Received: $changesJson" >&2
-		
-		
-      done \
+    | grep -Eo '"id":[0-9]+|"number":"[^"]+"|"status":"[^"]+"' \
+    | paste - - - \
+    | while IFS=$'\t' read -r idLine numberLine statusLine; do
+  	  buildId=${idLine//[^0-9]/}
+  	  buildNumber=${numberLine#*\"number\":\"}
+  	  buildNumber=${buildNumber%\"}
+  	  status=${statusLine#*\"status\":\"}
+  	  status=${status%\"}
+  
+  	  if [[ $status == "SUCCESS" ]]; then
+  		break
+  	  fi
+  	  echo "Found failed build: $buildNumber" >&2
+  
+  	# pull all change versions
+  	# curl -s "${tcHeaders[@]}" "$(printf "$tcGetChangesUrl" "$buildId")" \
+  	  # | grep -oE '"version":"[^"]+"' \
+  	  # | cut -d'"' -f4
+  
+  	  # pull all change versions
+  	  url="$(printf "$tcGetChangesUrl" "$buildId")"
+  	  [[ "$DEBUG" == true ]] && echo "# DEBUG: Sent GET $url" >&2
+  	  changesJson=$(curl -s "${tcHeaders[@]}" "$url")
+  	  [[ "$DEBUG" == true ]] && echo "# DEBUG: Received: $changesJson" >&2
+  
+  	done \
     | sort -u \
     | grep -v '^[[:space:]]*$'   # drop any blank lines
 }
