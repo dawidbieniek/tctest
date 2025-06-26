@@ -218,4 +218,9 @@ if (-not $previousCuIds) { $previousCuIds = @() }
 if (-not $currentCuIds) { $currentCuIds = @() }
 $allCuIds = ($currentCuIds + $previousCuIds) | Select-Object -Unique
 
+if (-not $allCuIds -or $allCuIds.Count -eq 0) { 
+	Write-Warning "No new CU tasks found"
+	return 
+}
+
 Update-ClickUpTasks -TaskIds $allCuIds -ProjectName $projectName -BuildNumber $BuildNumber
